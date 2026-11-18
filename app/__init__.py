@@ -1,0 +1,1 @@
+"""GoWayki IoT panel."""

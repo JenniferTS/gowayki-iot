@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#071018" />
+  <title>{{ device.name or 'Paradero' }} · GoWayki</title>
+  <link rel="stylesheet" href="/static/paradero/vendor/leaflet/leaflet.css?v={{ asset_v }}" />
+  <link rel="stylesheet" href="/static/paradero/paradero.css?v={{ asset_v }}" />
+</head>
+<body>
+  <div id="rotate-hint" class="rotate-hint" aria-live="polite">
+    <div>
+      <strong>Gira la tablet a vertical</strong>
+      <p>Esta pantalla está pensada para modo retrato.</p>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="top">
+      <div class="brand">
+        <span class="logo">GoWayki</span>
+        <div>
+          <h1 id="stop-name">{{ stop.stop_name if stop else device.name }}</h1>
+          <p id="stop-meta">
+            {% if stop and stop.district_name %}{{ stop.district_name }} · {% endif %}
+            {{ device.name }}
+          </p>
+        </div>
+      </div>
+      <div class="top-aside">
+        <div class="clock" id="clock">--:--</div>
+        <div id="idle-countdown" class="idle-countdown" hidden aria-live="polite">Anuncio en 0:45</div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="map-panel" aria-label="Mapa">
+        <div id="map" class="map" role="application" aria-label="Mapa de rutas"></div>
+        <button type="button" id="btn-center" class="btn-center" aria-label="Centrar paradero">Centrar</button>
+        <div id="map-status" class="map-status" hidden>Sin red · mapa limitado</div>
+      </section>
+
+      <section class="routes-panel" aria-label="Rutas">
+        <div class="panel-head">
+          <h2>Rutas en este paradero</h2>
+          <span id="route-count">{{ routes|length }}</span>
+        </div>
+        <div class="routes" id="routes">
+          {% if routes %}
+            {% for r in routes %}
+            <article class="route-card" data-route-id="{{ r.route_id }}" style="--route: #{{ r.route_color|replace('#','') }}">
+              <div class="badge">{{ r.route_short_name or r.route_id }}</div>
+              <div class="route-body">
+                <strong>{{ r.nombre_popular or r.route_long_name or r.route_short_name }}</strong>
+                <span>
+                  {% if r.desde and r.hasta %}{{ r.desde }} → {{ r.hasta }}
+                  {% else %}{{ r.route_long_name or '' }}{% endif %}
+                </span>
+                <em>{% if r.interval_min %}cada {{ r.interval_min }} min{% endif %}</em>
+              </div>
+            </article>
+            {% endfor %}
+          {% else %}
+            <p class="empty">Sin rutas asignadas. Configura un <code>stop_id</code> en el admin.</p>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="idle-overlay" class="idle-overlay" hidden>
+    <div class="ad-stage" id="ad-stage">
+      {% for ad in ads %}
+        {% if ad.media_type == 'video' %}
+          <video class="ad-item" data-duration="{{ ad.duration_sec }}" muted playsinline preload="{{ 'auto' if loop.first else 'none' }}" src="{{ ad.url }}"></video>
+        {% else %}
+          <img class="ad-item{% if ad.url.endswith('.svg') %} ad-svg{% endif %}" data-duration="{{ ad.duration_sec }}" src="{{ ad.url }}" alt="Anuncio" />
+        {% endif %}
+      {% else %}
+        {# Sin anuncios: el overlay no se activa en JS #}
+      {% endfor %}
+    </div>
+    <div class="ad-progress"><div id="ad-bar"></div></div>
+    <p class="idle-hint">Toca para volver al mapa</p>
+  </div>
+
+  <script>
+    window.__PARADERO__ = {
+      deviceId: {{ device.id|tojson }},
+      ads: {{ ads|tojson }},
+      routes: {{ routes|tojson }},
+      stop: {{ stop|tojson }},
+      idleSeconds: {{ idle_seconds|default(45)|tojson }}
+    };
+  </script>
+  <script src="/static/paradero/vendor/leaflet/leaflet.js?v={{ asset_v }}"></script>
+  <script src="/static/paradero/paradero.js?v={{ asset_v }}"></script>
+</body>
+</html>

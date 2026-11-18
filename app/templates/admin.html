@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin · GoWayki IoT</title>
+  <style>
+    :root {
+      --bg: #0b1220; --panel: #121c2e; --fg: #e8eef9; --muted: #93a4bf;
+      --line: #243249; --accent: #22d3ee; --danger: #fb7185; --ok: #34d399;
+      --sidebar: #0d1524;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(900px 400px at 0% 0%, #123055, transparent), var(--bg);
+      color: var(--fg); min-height: 100vh;
+    }
+    .hidden { display: none !important; }
+
+    /* Login */
+    #login {
+      max-width: 420px; margin: 12vh auto; padding: 1.25rem;
+      background: var(--panel); border: 1px solid var(--line); border-radius: .9rem;
+    }
+    #login h2 { margin: 0 0 .5rem; }
+
+    /* Shell */
+    #app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+      padding: .9rem 1.25rem; border-bottom: 1px solid var(--line);
+      background: rgba(13, 21, 36, 0.85); backdrop-filter: blur(8px);
+    }
+    .topbar h1 { margin: 0; font-size: 1.15rem; }
+    .topbar .meta { color: var(--muted); font-size: .85rem; }
+
+    .tabs {
+      display: flex; gap: .25rem; padding: .5rem 1.25rem 0;
+      border-bottom: 1px solid var(--line); overflow-x: auto;
+      background: rgba(13, 21, 36, 0.5);
+    }
+    .tab {
+      appearance: none; background: transparent; border: none; color: var(--muted);
+      padding: .7rem 1rem; border-radius: .55rem .55rem 0 0; cursor: pointer;
+      font-weight: 650; white-space: nowrap; border-bottom: 2px solid transparent;
+    }
+    .tab:hover { color: var(--fg); background: rgba(255,255,255,0.03); }
+    .tab.active {
+      color: var(--fg); background: var(--panel);
+      border-bottom-color: var(--accent);
+    }
+
+    main { max-width: 1120px; width: 100%; margin: 0 auto; padding: 1.25rem; }
+    .panel { display: none; }
+    .panel.active { display: grid; gap: 1rem; }
+
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: .9rem; padding: 1rem;
+    }
+    .card h2 { margin: 0 0 .75rem; font-size: 1.05rem; }
+    .card-head {
+      display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-bottom: .75rem;
+    }
+    .card-head h2 { margin: 0; }
+
+    label { display: grid; gap: .35rem; font-size: .9rem; color: var(--muted); margin-bottom: .75rem; }
+    input, select, button {
+      font: inherit; border-radius: .5rem; border: 1px solid var(--line);
+      background: #0b1424; color: var(--fg); padding: .55rem .7rem;
+    }
+    button {
+      background: var(--accent); color: #04212a; border: none; font-weight: 700; cursor: pointer;
+    }
+    button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+    button.danger { background: var(--danger); color: #1f0a10; }
+    a.btn-link {
+      display: inline-block; text-decoration: none; background: transparent; color: var(--accent);
+      border: 1px solid var(--line); border-radius: .5rem; padding: .55rem .7rem; font-weight: 700;
+      font-size: inherit;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; }
+    .row > * { flex: 1 1 160px; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .badge { display: inline-block; padding: .15rem .45rem; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+    .on { background: rgba(52,211,153,.15); color: var(--ok); }
+    .off { background: rgba(148,163,184,.12); color: var(--muted); }
+    .code-box {
+      font-size: 2rem; letter-spacing: .3em; font-weight: 800; text-align: center;
+      padding: 1rem; background: #07101c; border-radius: .7rem; margin-top: .75rem;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .hint { color: var(--muted); font-size: .85rem; }
+    .muted-box {
+      border: 1px dashed var(--line); border-radius: .75rem; padding: 1.25rem; color: var(--muted);
+    }
+    #stops { max-height: 160px; overflow: auto; margin-top: .4rem; }
+    #stops button { width: 100%; text-align: left; background: #0b1424; color: var(--fg); border: 1px solid var(--line); }
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .75rem;
+    }
+    .stat {
+      background: #0b1424; border: 1px solid var(--line); border-radius: .7rem; padding: .85rem;
+    }
+    .stat strong { display: block; font-size: 1.4rem; margin-top: .2rem; }
+    .stat span { color: var(--muted); font-size: .8rem; }
+
+    .create-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .85rem;
+    }
+    .create-tile {
+      appearance: none; width: 100%; text-align: left; cursor: pointer;
+      background: #0b1424; border: 1px solid var(--line); border-radius: .85rem;
+      padding: 1.1rem 1.15rem; color: var(--fg);
+    }
+    .create-tile:hover { border-color: var(--accent); }
+    .create-tile h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+    .create-tile p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.4; }
+    .create-tile .tag {
+      display: inline-block; margin-top: .75rem; font-size: .72rem; font-weight: 700;
+      padding: .2rem .5rem; border-radius: 999px; background: rgba(34,211,238,.12); color: var(--accent);
+    }
+    .create-tile.pi .tag { background: rgba(52,211,153,.12); color: var(--ok); }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(3,8,16,.72); backdrop-filter: blur(6px);
+      display: grid; place-items: center; padding: 1rem; z-index: 50;
+    }
+    .modal {
+      width: min(440px, 100%); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 1rem; padding: 1.15rem 1.2rem; box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    .modal h2 { margin: 0 0 .35rem; font-size: 1.15rem; }
+    .modal .hint { margin: 0 0 1rem; }
+    .modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
+    .type-chip {
+      display: inline-block; font-size: .72rem; font-weight: 700; padding: .15rem .45rem;
+      border-radius: 999px; margin-bottom: .5rem;
+    }
+    .type-chip.kiosk { background: rgba(34,211,238,.12); color: var(--accent); }
+    .type-chip.pi { background: rgba(52,211,153,.12); color: var(--ok); }
+
+    .warn { background: rgba(251,191,36,.15); color: #fbbf24; }
+    .danger-badge { background: rgba(251,113,133,.15); color: var(--danger); }
+
+    .modal.preview-modal {
+      width: min(1100px, 100%);
+      max-height: calc(100vh - 2rem);
+      display: flex; flex-direction: column; gap: .75rem;
+      padding: 1rem 1.1rem;
+    }
+    .preview-toolbar {
+      display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+      justify-content: space-between;
+    }
+    .preview-toolbar .left, .preview-toolbar .right {
+      display: flex; flex-wrap: wrap; gap: .4rem; align-items: center;
+    }
+    .preview-toolbar h2 { margin: 0; font-size: 1.05rem; }
+    .orient-group {
+      display: inline-flex; border: 1px solid var(--line); border-radius: .5rem; overflow: hidden;
+    }
+    .orient-group button {
+      border: none; border-radius: 0; background: transparent; color: var(--muted);
+      padding: .4rem .7rem; font-weight: 700;
+    }
+    .orient-group button.active { background: rgba(34,211,238,.15); color: var(--accent); }
+    .preview-frame-wrap {
+      flex: 1; min-height: 0; display: grid; place-items: center;
+      background: #07101c; border: 1px solid var(--line); border-radius: .75rem;
+      padding: .75rem; overflow: auto;
+    }
+    .preview-bezel {
+      background: #000; border-radius: 12px; padding: 10px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.45);
+      transition: width .2s, height .2s;
+    }
+    .preview-bezel.landscape { width: min(960px, 92vw); aspect-ratio: 16 / 10; }
+    .preview-bezel.portrait { width: min(420px, 78vw); aspect-ratio: 10 / 16; }
+    .preview-bezel iframe {
+      width: 100%; height: 100%; border: 0; border-radius: 6px; background: #0b1220;
+      display: block;
+    }
+    @media (max-width: 640px) {
+      .modal.preview-modal { width: 100%; max-height: 100vh; border-radius: .75rem; }
+      .preview-bezel.landscape { width: 100%; }
+      .preview-bezel.portrait { width: min(320px, 88vw); }
+    }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h2>Admin IoT</h2>
+    <p class="hint">Usa el <code>ADMIN_TOKEN</code> configurado en el entorno (.env).</p>
+    <label>Token
+      <input id="token" type="password" autocomplete="current-password" />
+    </label>
+    <button id="login-btn">Entrar</button>
+    <p id="login-error" class="hint" style="color:var(--danger)"></p>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="topbar">
+      <div>
+        <h1>GoWayki IoT</h1>
+        <div class="meta">Panel de administración</div>
+      </div>
+      <button class="secondary" id="logout">Salir</button>
+    </div>
+
+    <nav class="tabs" id="tabs" aria-label="Secciones">
+      <button type="button" class="tab active" data-tab="overview">Resumen</button>
+      <button type="button" class="tab" data-tab="devices">Dispositivos</button>
+      <button type="button" class="tab" data-tab="ads">Anuncios</button>
+      <button type="button" class="tab" data-tab="mqttusers">Usuarios MQTT</button>
+      <button type="button" class="tab" data-tab="settings">Ajustes</button>
+    </nav>
+
+    <main>
+      <!-- Resumen -->
+      <section class="panel active" id="panel-overview" data-panel="overview">
+        <div class="card">
+          <h2>Resumen</h2>
+          <div class="stats" id="overview-stats">
+            <div class="stat"><span>Dispositivos</span><strong id="stat-devices">—</strong></div>
+            <div class="stat"><span>Online</span><strong id="stat-online">—</strong></div>
+            <div class="stat"><span>MQTT online</span><strong id="stat-mqtt">—</strong></div>
+            <div class="stat"><span>Anuncios activos</span><strong id="stat-ads">—</strong></div>
+          </div>
+          <p class="hint" style="margin-top:1rem">
+            Usa las pestañas para administrar dispositivos, playlist de publicidad y ajustes.
+          </p>
+        </div>
+      </section>
+
+      <!-- Dispositivos -->
+      <section class="panel" id="panel-devices" data-panel="devices">
+        <div class="card">
+          <div class="card-head">
+            <h2>Agregar dispositivo</h2>
+          </div>
+          <div class="create-grid">
+            <button type="button" class="create-tile" id="open-kiosk-modal">
+              <h3>Kiosco (tablet)</h3>
+              <p>App Flutter en la tablet del paradero. Solo necesitas un nombre.</p>
+              <span class="tag">código 6 dígitos</span>
+            </button>
+            <button type="button" class="create-tile pi" id="open-pi-modal">
+              <h3>Raspberry Pi</h3>
+              <p>Agente GPIO / MQTT / shell. Instalación por script y código fijo.</p>
+              <span class="tag">GPIO · remoto</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Dispositivos</h2>
+            <button class="secondary" id="refresh-devices">Actualizar</button>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Tipo</th>
+                  <th>Estado</th>
+                  <th>Stop</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="devices"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Anuncios -->
+      <section class="panel" id="panel-ads" data-panel="ads">
+        <div class="card">
+          <h2>Agregar anuncio</h2>
+          <p class="hint">
+            Solo URLs directas a archivo (HTTPS). Imágenes: .jpg .png .webp .gif .svg ·
+            Videos: .mp4 .webm .mov — no YouTube/Vimeo.
+          </p>
+          <div class="row">
+            <label style="flex:2 1 280px">URL del anuncio
+              <input id="ad_url" placeholder="https://cdn.ejemplo.com/promo.mp4" />
+            </label>
+            <label>Duración (s)
+              <input id="ad_duration" type="number" min="3" max="300" value="10" />
+            </label>
+          </div>
+          <p id="ad-error" class="hint" style="color:var(--danger)"></p>
+          <button id="ad-add">Agregar a la playlist</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Playlist</h2>
+            <button class="secondary" id="refresh-ads">Actualizar</button>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Preview</th>
+                  <th>URL / tipo</th>
+                  <th>Seg</th>
+                  <th>Activo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ads"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Usuarios MQTT -->
+      <section class="panel" id="panel-mqttusers" data-panel="mqttusers">
+        <div class="card">
+          <h2>Crear usuario MQTT</h2>
+          <p class="hint">
+            Cada usuario solo puede publicar/suscribirse en <code>gowayki/&lt;usuario&gt;/#</code>.
+            La contraseña se genera automáticamente y se muestra <strong>una sola vez</strong>.
+          </p>
+          <div class="row">
+            <label style="flex:2 1 240px">Usuario
+              <input id="mq_username" placeholder="ana" maxlength="32" autocomplete="off" />
+            </label>
+          </div>
+          <p id="mq-error" class="hint" style="color:var(--danger)"></p>
+          <button id="mq-create">Crear usuario</button>
+          <p id="mq-sync" class="hint"></p>
+          <div id="mq-secret" class="card hidden" style="border-color:var(--accent,#4ade80);margin-top:1rem">
+            <h3>Credenciales (cópialas ahora — no se volverán a mostrar)</h3>
+            <pre id="mq-secret-body" style="white-space:pre-wrap;user-select:all"></pre>
+            <button class="secondary" id="mq-secret-copy">Copiar</button>
+            <button class="secondary" id="mq-secret-hide">Ya las guardé</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Usuarios</h2>
+            <button class="secondary" id="refresh-mq">Actualizar</button>
+          </div>
+          <div style="overflow:auto">
+            <table>
+              <thead><tr><th>Usuario</th><th>Topics</th><th>Creado</th><th>Acciones</th></tr></thead>
+              <tbody id="mq-users"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2>Demo en vivo</h2>
+            <span class="hint" id="mq-live-status"></span>
+          </div>
+          <div class="row" style="align-items:flex-end">
+            <label>Usuario
+              <select id="mq-demo-user"></select>
+            </label>
+            <label style="display:flex;gap:.5rem;align-items:center">LED
+              <input type="checkbox" id="mq-led" style="width:auto" />
+              <span id="mq-led-label">OFF</span>
+            </label>
+          </div>
+          <p class="hint">Potenciómetro (<code id="mq-pot-topic">gowayki/&lt;usuario&gt;/potenciometro</code>):</p>
+          <div id="mq-pot" style="font-size:2.4rem;font-weight:700">—</div>
+          <div style="background:rgba(255,255,255,.08);border-radius:6px;height:12px;overflow:hidden">
+            <div id="mq-pot-bar" style="height:100%;width:0;background:var(--accent,#4ade80);transition:width .3s"></div>
+          </div>
+          <p class="hint" id="mq-pot-ts"></p>
+        </div>
+      </section>
+
+      <!-- Ajustes -->
+      <section class="panel" id="panel-settings" data-panel="settings">
+        <div class="card">
+          <h2>Ajustes del paradero</h2>
+          <p class="hint">Cambios se aplican en vivo a las tablets conectadas (SSE).</p>
+          <label>Segundos de inactividad antes de la publicidad (salvapantallas)
+            <input id="idle_seconds" type="number" min="10" max="600" step="1" value="45" />
+          </label>
+          <div class="modal-actions" style="justify-content:flex-start;margin-top:.25rem">
+            <button type="button" id="settings-save">Guardar</button>
+            <span class="hint" id="settings-status"></span>
+          </div>
+          <p class="hint" style="margin-top:1rem">
+            Las variables sensibles (tokens, DATABASE_URL, MQTT) van en el entorno (.env), no en el repo.
+          </p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal crear kiosco -->
+  <div id="modal-kiosk" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <span class="type-chip kiosk">Kiosco · tablet</span>
+      <h2>Nuevo kiosco</h2>
+      <p class="hint">Solo el nombre. El código de 6 dígitos se asigna al crear y no cambia.</p>
+      <label>Nombre
+        <input id="kiosk-name" placeholder="Paradero Av. Arequipa 1200" autocomplete="off" />
+      </label>
+      <div id="kiosk-result" class="hidden">
+        <p class="hint">Listo. Ingresa este código en la tablet:</p>
+        <div class="code-box" id="kiosk-code">------</div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-close-modal="modal-kiosk">Cerrar</button>
+        <button type="button" id="kiosk-create-btn">Crear kiosco</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal crear Raspberry Pi -->
+  <div id="modal-pi" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <span class="type-chip pi">Raspberry Pi</span>
+      <h2>Nueva Raspberry Pi</h2>
+      <p class="hint">Para GPIO, MQTT y consola remota. La parada GTFS se asigna después si hace falta.</p>
+      <label>Nombre
+        <input id="pi-name" placeholder="Pi4-gowayki · Paradero Centro" autocomplete="off" />
+      </label>
+      <div id="pi-result" class="hidden">
+        <p class="hint">Código fijo (no expira):</p>
+        <div class="code-box" id="pi-code">------</div>
+        <p class="hint" style="margin-top:.85rem">Instalación (una vez en la Pi):</p>
+        <pre style="background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;margin:0">curl -fsSL http://127.0.0.1:8000/pi/install.sh | sudo bash</pre>
+        <p class="hint" style="margin-top:.75rem">Vincular:</p>
+        <pre id="pi-pair-cmd" style="background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;margin:0"></pre>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-close-modal="modal-pi">Cerrar</button>
+        <button type="button" id="pi-create-btn">Crear Raspberry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal ver código / asignar parada -->
+  <div id="modal-code" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2 id="code-title">Código del dispositivo</h2>
+      <p class="hint" id="code-hint">Código fijo de vinculación.</p>
+      <div class="code-box" id="pair-code">------</div>
+      <pre id="code-pi-extra" class="hidden" style="margin-top:.75rem;background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem"></pre>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-close-modal="modal-code">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-stop" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>Asignar parada GTFS</h2>
+      <p class="hint" id="stop-modal-hint">Opcional: vincula este dispositivo a una parada.</p>
+      <input type="hidden" id="stop-device-id" />
+      <label>Buscar parada
+        <input id="stop_q" placeholder="Ej. Arequipa, Lambramani…" autocomplete="off" />
+      </label>
+      <div id="stops"></div>
+      <label>Stop ID
+        <input id="stop_id" placeholder="se rellena al elegir" />
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="secondary" data-close-modal="modal-stop">Cancelar</button>
+        <button type="button" class="secondary" id="stop-clear-btn">Quitar parada</button>
+        <button type="button" id="stop-save-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="modal-preview" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+    <div class="modal preview-modal">
+      <div class="preview-toolbar">
+        <div class="left">
+          <h2 id="preview-title">Vista previa</h2>
+          <span class="hint" id="preview-id"></span>
+        </div>
+        <div class="right">
+          <div class="orient-group" role="group" aria-label="Orientación">
+            <button type="button" id="preview-land" class="active">Horizontal</button>
+            <button type="button" id="preview-port">Vertical</button>
+          </div>
+          <button type="button" class="secondary" id="preview-reload">Recargar</button>
+          <a class="btn-link" id="preview-open" href="#" target="_blank" rel="noopener">Abrir pestaña</a>
+          <button type="button" class="secondary" data-close-modal="modal-preview">Cerrar</button>
+        </div>
+      </div>
+      <div class="preview-frame-wrap">
+        <div class="preview-bezel landscape" id="preview-bezel">
+          <iframe id="preview-iframe" title="Vista previa del paradero" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        </div>
+      </div>
+      <p class="hint" style="margin:0">Solo lectura · misma cookie de admin · no afecta el latido del dispositivo.</p>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "gowayki_iot_admin_token";
+    const TAB_KEY = "gowayki_iot_admin_tab";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let loaded = { overview: false, devices: false, ads: false, settings: false, mqttusers: false };
+
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+      headers["X-Admin-Token"] = token;
+      const res = await fetch(path, { ...opts, headers });
+      if (res.status === 401) throw new Error("unauthorized");
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      if (!res.ok) {
+        const detail = data && data.detail;
+        const msg = Array.isArray(detail)
+          ? detail.map((e) => e.msg || JSON.stringify(e)).join("; ")
+          : (detail || res.statusText);
+        throw new Error(msg);
+      }
+      return data;
+    }
+
+    function showApp(ok) {
+      $("login").classList.toggle("hidden", ok);
+      $("app").classList.toggle("hidden", !ok);
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return "nunca";
+      return new Date(ts * 1000).toLocaleString("es-PE");
+    }
+
+    function detailMessage(err) {
+      if (Array.isArray(err)) {
+        return err.map((e) => e.msg || JSON.stringify(e)).join("; ");
+      }
+      return String(err || "Error");
+    }
+
+    /* ---- Tabs ---- */
+    function currentTab() {
+      const hash = (location.hash || "").replace(/^#/, "");
+      if (["overview", "devices", "ads", "mqttusers", "settings"].includes(hash)) return hash;
+      return localStorage.getItem(TAB_KEY) || "overview";
+    }
+
+    async function setTab(name, { pushHash = true } = {}) {
+      if (name !== "mqttusers") stopMqttLive();
+      document.querySelectorAll(".tab").forEach((el) => {
+        el.classList.toggle("active", el.dataset.tab === name);
+      });
+      document.querySelectorAll(".panel").forEach((el) => {
+        el.classList.toggle("active", el.dataset.panel === name);
+      });
+      localStorage.setItem(TAB_KEY, name);
+      if (pushHash) {
+        history.replaceState(null, "", `#${name}`);
+      }
+      await ensureTabData(name);
+    }
+
+    async function ensureTabData(name) {
+      if (name === "overview") {
+        await loadOverview();
+        loaded.overview = true;
+      } else if (name === "devices" && !loaded.devices) {
+        await loadDevices();
+        loaded.devices = true;
+      } else if (name === "ads" && !loaded.ads) {
+        await loadAds();
+        loaded.ads = true;
+      } else if (name === "mqttusers") {
+        if (!loaded.mqttusers) { await loadMqttUsers(); loaded.mqttusers = true; }
+        startMqttLive();
+      } else if (name === "settings" && !loaded.settings) {
+        await loadSettings();
+        loaded.settings = true;
+      }
+    }
+
+    async function loadSettings() {
+      const data = await api("/api/admin/settings");
+      $("idle_seconds").value = String(data.idle_seconds ?? 45);
+      $("settings-status").textContent = "";
+    }
+
+    /* ---- Auth ---- */
+    async function login() {
+      token = $("token").value.trim();
+      try {
+        await api("/api/admin/devices");
+        localStorage.setItem(TOKEN_KEY, token);
+        document.cookie = `admin_token=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
+        $("login-error").textContent = "";
+        loaded = { overview: false, devices: false, ads: false, settings: false };
+        showApp(true);
+        await setTab(currentTab());
+      } catch (e) {
+        $("login-error").textContent = "Token inválido";
+        showApp(false);
+      }
+    }
+
+    /* ---- Overview ---- */
+    async function loadOverview() {
+      const [devices, ads] = await Promise.all([
+        api("/api/admin/devices"),
+        api("/api/admin/ads"),
+      ]);
+      $("stat-devices").textContent = String(devices.length);
+      $("stat-online").textContent = String(devices.filter((d) => d.online).length);
+      $("stat-mqtt").textContent = String(devices.filter((d) => d.mqtt_online).length);
+      $("stat-ads").textContent = String(ads.filter((a) => a.active).length);
+    }
+
+    /* ---- Devices ---- */
+    // Modelo, batería, red y GPS que reporta la app kiosco en cada latido.
+    function deviceTelemetry(d) {
+      const t = d.telemetry;
+      if (!t) return "";
+      const dev = t.device || {};
+      const lines = [];
+      const model = [dev.manufacturer, dev.model].filter(Boolean).join(" ");
+      if (model) lines.push(escapeHtml(`${model}${dev.os_version ? " · " + dev.os_version : ""}${dev.app_version ? " · v" + dev.app_version : ""}`));
+      if (d.last_battery_level != null) {
+        const low = d.last_battery_level < 20 && !d.last_battery_charging;
+        lines.push(`<span${low ? ' style="color:#f87171"' : ""}>🔋 ${d.last_battery_level}%${d.last_battery_charging ? " cargando" : " sin cargar"}</span>`);
+      }
+      const net = (t.network?.types || []).join(", ");
+      if (net) lines.push(`📶 ${escapeHtml(net)}`);
+      if (d.last_lat != null && d.last_lon != null) {
+        const q = `${d.last_lat},${d.last_lon}`;
+        const acc = d.last_location_accuracy_m != null ? ` ±${Math.round(d.last_location_accuracy_m)} m` : "";
+        lines.push(`📍 <a href="https://www.google.com/maps?q=${encodeURIComponent(q)}" target="_blank" rel="noopener">${Number(d.last_lat).toFixed(5)}, ${Number(d.last_lon).toFixed(5)}</a>${acc} · ${fmtTime(d.last_location_at)}`);
+      } else if (t.location_status) {
+        lines.push(`📍 sin GPS (${escapeHtml(t.location_status)})`);
+      }
+      // Cada línea ya viene escapada.
+      return lines.map((l) => `<br><span class="hint">${l}</span>`).join("");
+    }
+
+    function pageStatusLine(d) {
+      if (d.last_page_ok == null) {
+        return `<br><span class="badge off">Pantalla: sin dato</span>`;
+      }
+      if (!d.online) {
+        return d.last_page_ok
+          ? `<br><span class="badge warn">Última pantalla OK (offline)</span>`
+          : `<br><span class="badge danger-badge">Última: página caída (offline)</span>`;
+      }
+      return d.last_page_ok
+        ? `<br><span class="badge on">Pantalla OK</span>`
+        : `<br><span class="badge danger-badge">Página caída</span>`;
+    }
+
+    function reportedUrlLine(d) {
+      const conf = (d.display_url || "").trim();
+      const rep = (d.reported_display_url || "").trim();
+      if (!rep || !conf || rep === conf) return "";
+      return `<br><span class="hint">URL reportada: <code style="word-break:break-all">${escapeHtml(rep)}</code></span>`;
+    }
+
+    let previewDeviceId = null;
+
+    function openPreview(id, name) {
+      previewDeviceId = id;
+      const url = `/paradero/${encodeURIComponent(id)}`;
+      $("preview-title").textContent = name || "Vista previa";
+      $("preview-id").textContent = id;
+      $("preview-open").href = url;
+      const frame = $("preview-iframe");
+      frame.src = "about:blank";
+      openModal("modal-preview");
+      // Forzar recarga limpia tras abrir (cookie admin ya está en path=/).
+      setTimeout(() => { frame.src = url; }, 30);
+    }
+
+    function setPreviewOrient(mode) {
+      const bezel = $("preview-bezel");
+      bezel.classList.toggle("landscape", mode === "landscape");
+      bezel.classList.toggle("portrait", mode === "portrait");
+      $("preview-land").classList.toggle("active", mode === "landscape");
+      $("preview-port").classList.toggle("active", mode === "portrait");
+    }
+
+    async function loadDevices() {
+      const list = await api("/api/admin/devices");
+      const tbody = $("devices");
+      tbody.innerHTML = list.map((d) => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(d.name)}</strong><br>
+            <span class="hint">${escapeHtml(d.id)}</span><br>
+            <span class="hint">Código: <strong style="color:var(--accent);letter-spacing:.08em">${escapeHtml(d.pair_code || "—")}</strong></span><br>
+            <span class="hint">HB: ${fmtTime(d.last_heartbeat_at)}</span>
+            ${pageStatusLine(d)}
+            ${reportedUrlLine(d)}
+            ${deviceTelemetry(d)}
+          </td>
+          <td>${d.device_type === "pi" ? "Raspberry Pi" : "Kiosco"}</td>
+          <td>
+            <span class="badge ${d.online ? "on" : "off"}">${d.online ? "online" : "offline"}</span>
+            <span class="badge ${d.mqtt_online ? "on" : "off"}">mqtt ${d.mqtt_online ? "on" : "off"}</span>
+            <span class="badge ${d.paired ? "on" : "off"}">${d.paired ? "vinculado" : "sin vincular"}</span>
+          </td>
+          <td><code>${escapeHtml(d.stop_id || "—")}</code></td>
+          <td class="actions">
+            ${d.device_type !== "pi" ? `<button class="secondary" data-act="preview" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-url="${escapeHtml(d.display_url || "")}">Ver pantalla</button>` : ""}
+            <button data-act="code" data-id="${d.id}" data-type="${escapeHtml(d.device_type)}" data-code="${escapeHtml(d.pair_code || "")}" data-name="${escapeHtml(d.name)}">Ver código</button>
+            <button class="secondary" data-act="stop" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-stop="${escapeHtml(d.stop_id || "")}">Parada</button>
+            ${d.device_type === "pi" ? `<a class="btn-link" href="/remote/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">Consola</a>` : ""}
+            ${d.device_type === "pi" ? `<a class="btn-link" href="/gpio/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">GPIO</a>` : ""}
+            <button class="secondary" data-act="reload" data-id="${d.id}">Reload</button>
+            <button class="secondary" data-act="reboot" data-id="${d.id}">Reboot</button>
+            <button class="secondary" data-act="unpair" data-id="${d.id}">Unpair</button>
+            <button class="danger" data-act="delete" data-id="${d.id}" data-name="${escapeHtml(d.name)}">Eliminar</button>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="5" class="hint">Sin dispositivos todavía.</td></tr>`;
+    }
+
+    function openModal(id) {
+      $(id).classList.remove("hidden");
+    }
+    function closeModal(id) {
+      $(id).classList.add("hidden");
+    }
+
+    async function createDevice(deviceType, nameInputId, resultId, codeId) {
+      const name = $(nameInputId).value.trim();
+      if (!name) return alert("Nombre requerido");
+      const device = await api("/api/admin/devices", {
+        method: "POST",
+        body: JSON.stringify({ name, device_type: deviceType, stop_id: null }),
+      });
+      $(resultId).classList.remove("hidden");
+      $(codeId).textContent = device.pair_code || "------";
+      if (deviceType === "pi") {
+        $("pi-pair-cmd").textContent =
+          `echo ${device.pair_code} | sudo tee /etc/gowayki/pair.code\nsudo systemctl restart gowayki-pi`;
+      }
+      $(nameInputId).value = "";
+      loaded.devices = true;
+      await loadDevices();
+      loaded.overview = false;
+    }
+
+    /* ---- Ads ---- */
+    function clientValidateAdUrl(url) {
+      const u = (url || "").trim();
+      if (!u) return "URL vacía";
+      let parsed;
+      try { parsed = new URL(u); } catch { return "URL inválida"; }
+      if (!/^https?:$/i.test(parsed.protocol)) return "Debe ser http(s)://";
+      if (parsed.protocol === "http:" && !["localhost", "127.0.0.1"].includes(parsed.hostname)) {
+        return "Usa https:// (http solo en localhost)";
+      }
+      const blocked = ["youtube.com", "www.youtube.com", "youtu.be", "vimeo.com", "www.vimeo.com", "tiktok.com", "www.tiktok.com"];
+      if (blocked.includes(parsed.hostname.toLowerCase())) {
+        return "No se admiten YouTube/Vimeo/TikTok: usa URL directa al archivo";
+      }
+      const path = parsed.pathname.toLowerCase();
+      const ok = /\.(jpe?g|png|webp|gif|svg|mp4|webm|mov|m4v)$/.test(path);
+      if (!ok) return "Extensión no soportada (.jpg .png .webp .gif .svg .mp4 .webm .mov)";
+      return null;
+    }
+
+    async function loadAds() {
+      const list = await api("/api/admin/ads");
+      const tbody = $("ads");
+      tbody.innerHTML = list.map((a, i) => {
+        const preview = a.media_type === "video"
+          ? `<video src="${escapeHtml(a.url)}" muted style="max-width:96px;max-height:54px;background:#000"></video>`
+          : `<img src="${escapeHtml(a.url)}" alt="" style="max-width:96px;max-height:54px;object-fit:cover;border-radius:4px" />`;
+        return `<tr data-ad-id="${a.id}">
+          <td>${i + 1}</td>
+          <td>${preview}</td>
+          <td>
+            <span class="badge ${a.media_type === "video" ? "on" : "off"}">${escapeHtml(a.media_type)}</span><br>
+            <a class="hint" href="${escapeHtml(a.url)}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${escapeHtml(a.url)}</a>
+          </td>
+          <td>
+            <input data-ad-dur="${a.id}" type="number" min="3" max="300" value="${a.duration_sec}" style="width:4.5rem" />
+          </td>
+          <td>
+            <input data-ad-active="${a.id}" type="checkbox" ${a.active ? "checked" : ""} />
+          </td>
+          <td class="actions">
+            <button class="secondary" data-ad-act="up" data-id="${a.id}">↑</button>
+            <button class="secondary" data-ad-act="down" data-id="${a.id}">↓</button>
+            <button class="secondary" data-ad-act="save" data-id="${a.id}">Guardar</button>
+            <button class="danger" data-ad-act="del" data-id="${a.id}">Borrar</button>
+          </td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="6" class="hint">Sin anuncios. Agrega una URL arriba.</td></tr>`;
+    }
+
+    async function addAd() {
+      $("ad-error").textContent = "";
+      const url = $("ad_url").value.trim();
+      const duration_sec = Number($("ad_duration").value || 10);
+      const err = clientValidateAdUrl(url);
+      if (err) {
+        $("ad-error").textContent = err;
+        return;
+      }
+      try {
+        await api("/api/admin/ads", {
+          method: "POST",
+          body: JSON.stringify({ url, duration_sec, active: true }),
+        });
+        $("ad_url").value = "";
+        loaded.ads = true;
+        await loadAds();
+        loaded.overview = false;
+      } catch (e) {
+        $("ad-error").textContent = detailMessage(e.message);
+      }
+    }
+
+    async function onAdsClick(e) {
+      const btn = e.target.closest("button[data-ad-act]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const act = btn.dataset.adAct;
+      const rows = Array.from(document.querySelectorAll("#ads tr[data-ad-id]"));
+      const ids = rows.map((r) => Number(r.dataset.adId));
+      const idx = ids.indexOf(id);
+      try {
+        if (act === "del") {
+          if (!confirm("¿Borrar este anuncio?")) return;
+          await api(`/api/admin/ads/${id}`, { method: "DELETE" });
+        } else if (act === "save") {
+          const dur = Number(document.querySelector(`[data-ad-dur="${id}"]`)?.value || 10);
+          const active = !!document.querySelector(`[data-ad-active="${id}"]`)?.checked;
+          await api(`/api/admin/ads/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ duration_sec: dur, active }),
+          });
+        } else if (act === "up" && idx > 0) {
+          const next = ids.slice();
+          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+          await api("/api/admin/ads/reorder", { method: "PUT", body: JSON.stringify({ ids: next }) });
+        } else if (act === "down" && idx >= 0 && idx < ids.length - 1) {
+          const next = ids.slice();
+          [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+          await api("/api/admin/ads/reorder", { method: "PUT", body: JSON.stringify({ ids: next }) });
+        } else {
+          return;
+        }
+        await loadAds();
+        loaded.overview = false;
+      } catch (err) {
+        alert(detailMessage(err.message));
+      }
+    }
+
+    /* ---- Usuarios MQTT ---- */
+    let mqLiveTimer = null;
+    function showMqSecret(d) {
+      $("mq-secret-body").textContent =
+        `Host: ${d.host}\nPuerto: ${d.port}\nUsuario: ${d.username}\nContraseña: ${d.password}\nTopics: ${d.topic_root}`;
+      $("mq-secret").classList.remove("hidden");
+    }
+    function syncHint(synced) {
+      $("mq-sync").textContent = synced
+        ? "Broker actualizado (recarga automática en ~2 s)."
+        : "Aviso: MQTT_AUTH_DIR no configurado — guardado en BD, pero el broker no se actualizó.";
+    }
+    async function loadMqttUsers() {
+      const data = await api("/api/admin/mqtt-users");
+      const tbody = $("mq-users");
+      tbody.innerHTML = data.users.length ? data.users.map((u) => `
+        <tr>
+          <td><strong>${escapeHtml(u.username)}</strong></td>
+          <td><code>${escapeHtml(u.topic_root)}</code></td>
+          <td>${fmtTime(u.created_at)}</td>
+          <td>
+            <button class="secondary" data-mq-regen="${escapeHtml(u.username)}">Regenerar contraseña</button>
+            <button class="danger" data-mq-del="${escapeHtml(u.username)}">Eliminar</button>
+          </td>
+        </tr>`).join("") : `<tr><td colspan="4" class="hint">Sin usuarios todavía.</td></tr>`;
+      const sel = $("mq-demo-user");
+      const prev = sel.value;
+      sel.innerHTML = data.users.map((u) => `<option value="${escapeHtml(u.username)}">${escapeHtml(u.username)}</option>`).join("");
+      if (prev && data.users.some((u) => u.username === prev)) sel.value = prev;
+      if (!data.sync_enabled) syncHint(false);
+      renderMqttLive();
+    }
+    async function createMqttUser() {
+      $("mq-error").textContent = "";
+      try {
+        const d = await api("/api/admin/mqtt-users", {
+          method: "POST", body: JSON.stringify({ username: $("mq_username").value.trim() }),
+        });
+        $("mq_username").value = "";
+        showMqSecret(d); syncHint(d.synced);
+        await loadMqttUsers();
+      } catch (err) { $("mq-error").textContent = detailMessage(err.message); }
+    }
+    let mqLast = { values: {}, connected: false };
+    function renderMqttLive() {
+      const user = $("mq-demo-user").value;
+      $("mq-live-status").textContent = mqLast.connected ? "Bridge MQTT conectado" : "Bridge MQTT desconectado";
+      $("mq-pot-topic").textContent = `gowayki/${user || "<usuario>"}/potenciometro`;
+      const v = (mqLast.values || {})[user] || {};
+      const raw = v.potenciometro;
+      $("mq-pot").textContent = raw ?? "—";
+      const n = Number(raw);
+      $("mq-pot-bar").style.width = Number.isFinite(n) ? `${Math.max(0, Math.min(100, n > 100 ? n / 40.95 : n))}%` : "0";
+      $("mq-pot-ts").textContent = v.potenciometro_ts ? `Último dato: ${fmtTime(v.potenciometro_ts)}` : "Esperando datos…";
+      if (v.led !== undefined && document.activeElement !== $("mq-led")) {
+        const on = String(v.led).toUpperCase() === "ON";
+        $("mq-led").checked = on; $("mq-led-label").textContent = on ? "ON" : "OFF";
+      }
+    }
+    async function pollMqttLive() {
+      try { mqLast = await api("/api/admin/mqtt-users/live"); } catch { /* ignore */ }
+      renderMqttLive();
+    }
+    function startMqttLive() {
+      if (mqLiveTimer) return;
+      pollMqttLive();
+      mqLiveTimer = setInterval(pollMqttLive, 1000);
+    }
+    function stopMqttLive() { if (mqLiveTimer) { clearInterval(mqLiveTimer); mqLiveTimer = null; } }
+
+    $("mq-create").addEventListener("click", createMqttUser);
+    $("mq_username").addEventListener("keydown", (e) => { if (e.key === "Enter") createMqttUser(); });
+    $("refresh-mq").addEventListener("click", () => loadMqttUsers().catch((e) => alert(e.message)));
+    $("mq-secret-hide").addEventListener("click", () => { $("mq-secret").classList.add("hidden"); $("mq-secret-body").textContent = ""; });
+    $("mq-secret-copy").addEventListener("click", () => navigator.clipboard?.writeText($("mq-secret-body").textContent));
+    $("mq-demo-user").addEventListener("change", renderMqttLive);
+    $("mq-led").addEventListener("change", async (e) => {
+      const user = $("mq-demo-user").value;
+      const on = e.target.checked;
+      $("mq-led-label").textContent = on ? "ON" : "OFF";
+      if (!user) return;
+      try {
+        await api(`/api/admin/mqtt-users/${encodeURIComponent(user)}/led`, { method: "POST", body: JSON.stringify({ on }) });
+      } catch (err) { alert(detailMessage(err.message)); e.target.checked = !on; $("mq-led-label").textContent = !on ? "ON" : "OFF"; }
+    });
+    $("mq-users").addEventListener("click", async (e) => {
+      const regen = e.target.closest("[data-mq-regen]");
+      const del = e.target.closest("[data-mq-del]");
+      try {
+        if (regen) {
+          const u = regen.dataset.mqRegen;
+          if (!confirm(`¿Regenerar la contraseña de ${u}? La anterior dejará de funcionar.`)) return;
+          const d = await api(`/api/admin/mqtt-users/${encodeURIComponent(u)}/regenerate`, { method: "POST" });
+          showMqSecret(d); syncHint(d.synced);
+        } else if (del) {
+          const u = del.dataset.mqDel;
+          if (!confirm(`¿Eliminar el usuario MQTT ${u}?`)) return;
+          const d = await api(`/api/admin/mqtt-users/${encodeURIComponent(u)}`, { method: "DELETE" });
+          syncHint(d.synced);
+          await loadMqttUsers();
+        }
+      } catch (err) { alert(detailMessage(err.message)); }
+    });
+
+    /* ---- Events ---- */
+    $("tabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".tab[data-tab]");
+      if (!btn) return;
+      setTab(btn.dataset.tab).catch((err) => alert(err.message));
+    });
+
+    window.addEventListener("hashchange", () => {
+      setTab(currentTab(), { pushHash: false }).catch(() => {});
+    });
+
+    let searchTimer;
+    $("stop_q").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        const q = $("stop_q").value.trim();
+        if (q.length < 2) { $("stops").innerHTML = ""; return; }
+        const stops = await api(`/api/admin/stops?q=${encodeURIComponent(q)}`);
+        $("stops").innerHTML = stops.map((s) =>
+          `<button type="button" data-stop="${escapeHtml(s.stop_id)}">${escapeHtml(s.stop_name)} <span class="hint">(${escapeHtml(s.stop_id)})</span></button>`
+        ).join("");
+      }, 250);
+    });
+
+    $("stops").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-stop]");
+      if (!btn) return;
+      $("stop_id").value = btn.dataset.stop;
+    });
+
+    $("devices").addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      if (act === "preview") {
+        openPreview(id, btn.dataset.name || id);
+      } else if (act === "code") {
+        const code = btn.dataset.code || "";
+        const isPi = btn.dataset.type === "pi";
+        $("code-title").textContent = btn.dataset.name || "Código";
+        $("code-hint").textContent = isPi
+          ? "Código fijo de la Raspberry Pi (no expira)."
+          : "Código fijo del kiosco (no expira). Ingrésalo en la tablet.";
+        $("pair-code").textContent = code || "------";
+        const extra = $("code-pi-extra");
+        if (isPi && code) {
+          extra.classList.remove("hidden");
+          extra.textContent = `echo ${code} | sudo tee /etc/gowayki/pair.code\nsudo systemctl restart gowayki-pi`;
+        } else {
+          extra.classList.add("hidden");
+        }
+        openModal("modal-code");
+      } else if (act === "stop") {
+        $("stop-device-id").value = id;
+        $("stop-modal-hint").textContent = `Parada para “${btn.dataset.name || id}” (opcional).`;
+        $("stop_id").value = btn.dataset.stop || "";
+        $("stop_q").value = "";
+        $("stops").innerHTML = "";
+        openModal("modal-stop");
+      } else if (act === "delete") {
+        const name = btn.dataset.name || id;
+        if (!confirm(`¿Eliminar definitivamente "${name}"?\nSe perderá la vinculación y el código.`)) return;
+        await api(`/api/admin/devices/${id}`, { method: "DELETE" });
+        await loadDevices();
+        loaded.overview = false;
+      } else {
+        await api(`/api/admin/devices/${id}/command`, {
+          method: "POST",
+          body: JSON.stringify({ command: act }),
+        });
+        await loadDevices();
+      }
+    });
+
+    $("login-btn").addEventListener("click", login);
+    $("token").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+    $("open-kiosk-modal").addEventListener("click", () => {
+      $("kiosk-result").classList.add("hidden");
+      $("kiosk-name").value = "";
+      openModal("modal-kiosk");
+      setTimeout(() => $("kiosk-name").focus(), 50);
+    });
+    $("open-pi-modal").addEventListener("click", () => {
+      $("pi-result").classList.add("hidden");
+      $("pi-name").value = "";
+      openModal("modal-pi");
+      setTimeout(() => $("pi-name").focus(), 50);
+    });
+    $("kiosk-create-btn").addEventListener("click", () =>
+      createDevice("kiosk", "kiosk-name", "kiosk-result", "kiosk-code").catch((e) => alert(e.message))
+    );
+    $("pi-create-btn").addEventListener("click", () =>
+      createDevice("pi", "pi-name", "pi-result", "pi-code").catch((e) => alert(e.message))
+    );
+    $("kiosk-name").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("kiosk-create-btn").click();
+    });
+    $("pi-name").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("pi-create-btn").click();
+    });
+    document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+      btn.addEventListener("click", () => closeModal(btn.dataset.closeModal));
+    });
+    document.querySelectorAll(".modal-backdrop").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (e.target === el) el.classList.add("hidden");
+      });
+    });
+    $("stop-save-btn").addEventListener("click", async () => {
+      const id = $("stop-device-id").value;
+      const stop_id = $("stop_id").value.trim() || null;
+      await api(`/api/admin/devices/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ stop_id }),
+      });
+      closeModal("modal-stop");
+      await loadDevices();
+    });
+    $("stop-clear-btn").addEventListener("click", async () => {
+      const id = $("stop-device-id").value;
+      await api(`/api/admin/devices/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ stop_id: "" }),
+      });
+      closeModal("modal-stop");
+      await loadDevices();
+    });
+    $("refresh-devices").addEventListener("click", () => loadDevices().catch((e) => alert(e.message)));
+    $("refresh-ads").addEventListener("click", () => loadAds().catch((e) => alert(e.message)));
+    $("ad-add").addEventListener("click", () => addAd());
+    $("ad_url").addEventListener("keydown", (e) => { if (e.key === "Enter") addAd(); });
+    $("ads").addEventListener("click", (e) => onAdsClick(e));
+    $("preview-land").addEventListener("click", () => setPreviewOrient("landscape"));
+    $("preview-port").addEventListener("click", () => setPreviewOrient("portrait"));
+    $("preview-reload").addEventListener("click", () => {
+      const frame = $("preview-iframe");
+      if (previewDeviceId) frame.src = `/paradero/${encodeURIComponent(previewDeviceId)}?_=${Date.now()}`;
+    });
+    // Al cerrar el modal, soltar el iframe para cortar el SSE.
+    const previewModal = $("modal-preview");
+    const _closePreview = () => {
+      $("preview-iframe").src = "about:blank";
+      previewDeviceId = null;
+    };
+    previewModal.querySelectorAll("[data-close-modal]").forEach((btn) => {
+      btn.addEventListener("click", _closePreview);
+    });
+    previewModal.addEventListener("click", (e) => {
+      if (e.target === previewModal) _closePreview();
+    });
+
+    $("settings-save").addEventListener("click", async () => {
+      const idle = Number($("idle_seconds").value);
+      if (!Number.isFinite(idle) || idle < 10 || idle > 600) {
+        $("settings-status").textContent = "Usa un valor entre 10 y 600";
+        return;
+      }
+      try {
+        const data = await api("/api/admin/settings", {
+          method: "PUT",
+          body: JSON.stringify({ idle_seconds: idle }),
+        });
+        $("idle_seconds").value = String(data.idle_seconds);
+        $("settings-status").textContent = "Guardado · aplicado a kioscos";
+      } catch (e) {
+        $("settings-status").textContent = e.message || "Error";
+      }
+    });
+
+    $("logout").addEventListener("click", () => {
+      localStorage.removeItem(TOKEN_KEY);
+      token = "";
+      showApp(false);
+    });
+
+    if (token) {
+      $("token").value = token;
+      login();
+    }
+  </script>
+</body>
+</html>

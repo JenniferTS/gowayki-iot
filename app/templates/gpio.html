@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GPIO · GoWayki</title>
+  <style>
+    :root {
+      --bg:#0b1220; --panel:#121a2b; --fg:#e8eef9; --muted:#93a4bf;
+      --accent:#22d3ee; --ok:#4ade80; --danger:#f87171; --line:#243049; --warn:#fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0; min-height:100vh; color:var(--fg);
+      font-family:"Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(900px 500px at 0% -10%, #12305555, transparent), var(--bg);
+    }
+    header {
+      display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; justify-content:space-between;
+      padding:1rem 1.25rem; border-bottom:1px solid var(--line); background:#0a101acc;
+      position:sticky; top:0; backdrop-filter:blur(8px); z-index:5;
+    }
+    h1 { margin:0; font-size:1.1rem; }
+    .meta { color:var(--muted); font-size:.8rem; }
+    .badge { display:inline-block; padding:.15rem .5rem; border-radius:.35rem; font-size:.72rem; border:1px solid var(--line); }
+    .badge.on { color:var(--ok); border-color:#166534; background:#052e16; }
+    .badge.off { color:var(--danger); border-color:#7f1d1d; background:#450a0a; }
+    main { max-width:1100px; margin:0 auto; padding:1.25rem; display:grid; gap:1rem; }
+    .login { background:var(--panel); border:1px solid var(--line); border-radius:.75rem; padding:1rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:.85rem; }
+    .dev {
+      background:#0b1424; border:1px solid var(--line); border-radius:.7rem; padding:.9rem;
+      display:grid; gap:.55rem; transition: border-color .2s, box-shadow .2s;
+      scroll-margin-top: 5rem;
+    }
+    .dev.live-on { border-color:#166534; box-shadow:0 0 0 1px #16653455; }
+    .dev.live-motion { border-color:#b45309; box-shadow:0 0 18px #fbbf2444; animation:pulse 1.2s ease-in-out infinite; }
+    .dev.hl-card {
+      outline: 2px solid var(--accent);
+      box-shadow: 0 0 0 1px #22d3ee55, 0 0 22px #22d3ee33;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow:0 0 8px #fbbf2433; }
+      50% { box-shadow:0 0 22px #fbbf2488; }
+    }
+    .dev h3 { margin:0; font-size:1rem; }
+    .dev .pin { color:var(--muted); font-size:.78rem; font-family:Consolas,monospace; }
+    .state { font-size:1.35rem; font-weight:700; }
+    .state.on { color:var(--ok); }
+    .state.off { color:var(--muted); }
+    .state.motion { color:var(--warn); }
+    .stats { display:grid; gap:.25rem; font-size:.8rem; color:var(--muted); }
+    .stats strong { color:var(--fg); font-weight:650; }
+    button {
+      background:var(--accent); color:#04212a; border:0; border-radius:.45rem;
+      padding:.55rem .8rem; font-weight:700; cursor:pointer; font:inherit;
+    }
+    button.secondary { background:transparent; color:var(--fg); border:1px solid var(--line); }
+    button:disabled { opacity:.5; }
+    input[type=password] {
+      width:100%; background:#0b1220; color:var(--fg); border:1px solid var(--line);
+      border-radius:.45rem; padding:.7rem .8rem; font:inherit;
+    }
+    label { display:block; color:var(--muted); font-size:.75rem; margin-bottom:.35rem; }
+    .row { display:flex; gap:.4rem; flex-wrap:wrap; }
+    .hint { color:var(--muted); font-size:.8rem; }
+    a { color:var(--accent); }
+    .hidden { display:none !important; }
+
+    /* —— Tablero Raspberry Pi (40 pines) —— */
+    .board-card {
+      background: var(--panel); border:1px solid var(--line); border-radius:.75rem; padding:1rem;
+    }
+    .board-card h2 {
+      margin:0 0 .65rem; font-size:.78rem; color:var(--muted); font-weight:650;
+      text-transform:uppercase; letter-spacing:.05em;
+    }
+    .pi {
+      position:relative; background:#0b6b3a; border:2px solid #14a05a; border-radius:12px;
+      aspect-ratio:85/56; width:100%; max-width:920px; margin:0 auto .75rem;
+      font-size:clamp(8px, 1.7vw, 12px); color:#d1fae5;
+    }
+    .hdr {
+      position:absolute; left:3%; top:4%; width:94%; height:17%;
+      background:#111; border-radius:4px; padding:.8% 1%;
+      display:grid; grid-template-rows:1fr 1fr; grid-auto-flow:column;
+      grid-template-columns:repeat(20, 1fr); gap:3px 2px;
+    }
+    .hdr i {
+      position:relative; display:flex; align-items:center; justify-content:center;
+      border-radius:50%; background:#4b5563; border:2px solid #6b7280;
+      min-width:0; font-style:normal; font-size:clamp(0px, 1.4vw, 11px);
+      font-weight:700; color:#fff; cursor:pointer;
+      transition: background .2s, box-shadow .2s, outline-color .15s; line-height:1;
+    }
+    .hdr i:hover, .hdr i.hl-pin { outline:2px solid #38bdf8; outline-offset:1px; }
+    .hdr i.use {
+      background:var(--ok); border-color:#86efac; color:#04210f;
+      box-shadow:0 0 6px #22c55e55;
+    }
+    .hdr i.use.active {
+      background:#86efac; border-color:#bbf7d0; color:#04210f;
+      box-shadow:0 0 12px #22c55e, 0 0 4px #86efac;
+    }
+    .hdr i.gnd { background:#000; border-color:#444; color:#aaa; }
+    .hdr i.p5 { background:#dc2626; border-color:#f87171; color:#fff; }
+    .hdr i.p33 { background:#f59e0b; border-color:#fcd34d; color:#222; }
+    .hdr i.flash { animation:fl .6s 3; }
+    @keyframes fl {
+      0%,100% { box-shadow:0 0 0 0 #facc15; }
+      50% { box-shadow:0 0 14px 6px #facc15; }
+    }
+    .hdr i .pin-lbl {
+      position:absolute; left:50%; top:110%; transform:translateX(-50%);
+      white-space:nowrap; font-size:clamp(7px, 1.1vw, 10px); font-weight:650;
+      color:#fde047; text-shadow:0 1px 2px #000a; pointer-events:none;
+      max-width:4.5em; overflow:hidden; text-overflow:ellipsis; line-height:1.1;
+      z-index:2;
+    }
+    .pi-lbl { position:absolute; left:3%; top:22%; color:#fde047; font-weight:700; }
+    .port {
+      position:absolute; background:#9ca3af; color:#111; border-radius:4px;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      font-weight:600; font-size:.9em;
+    }
+    .cpu {
+      position:absolute; left:8%; top:42%; width:22%; height:24%;
+      border:1px dashed #6ee7b7; border-radius:6px;
+      display:flex; align-items:center; justify-content:center; color:#a7f3d0;
+    }
+    .legend {
+      display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12px; color:var(--muted); margin-top:.35rem;
+    }
+    .legend i {
+      display:inline-block; width:12px; height:12px; border-radius:50%;
+      vertical-align:-2px; margin-right:5px; border:1px solid transparent;
+    }
+    #tip {
+      position:fixed; z-index:20; background:#0b1220; border:1px solid #38bdf8;
+      border-radius:10px; padding:10px 12px; font-size:13px; max-width:280px;
+      box-shadow:0 8px 24px #000a; pointer-events:none; display:none;
+    }
+    #tip b { font-size:14px; display:block; margin-bottom:4px; }
+    #tip .r { display:flex; justify-content:space-between; gap:12px; margin-top:3px; }
+    #tip .r span:first-child { color:var(--muted); }
+    #tip .pill {
+      display:inline-block; padding:1px 8px; border-radius:99px;
+      font-size:11px; font-weight:700; margin-left:6px; vertical-align:middle;
+    }
+    #tip .pill.pg { background:var(--ok); color:#04210f; }
+    #tip .pill.pn { background:#4b5563; color:#fff; }
+
+    @media (max-width: 560px) {
+      main { padding:.85rem; }
+      .pi { font-size:clamp(7px, 2.4vw, 11px); }
+      .hdr i { font-size:clamp(0px, 2vw, 9px); border-width:1.5px; }
+      .hdr i .pin-lbl { display:none; }
+      .port { font-size:.75em; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>GPIO · <span id="dev-name">…</span></h1>
+      <div class="meta"><span id="dev-id"></span> · sync <span id="sync-age">—</span> · <span id="live-mode">SSE</span></div>
+    </div>
+    <div class="row">
+      <span id="badge-online" class="badge off">offline</span>
+      <span id="badge-gpio" class="badge off">gpio ?</span>
+      <a href="/admin">← Admin</a>
+      <a id="link-remote" href="#">Consola</a>
+    </div>
+  </header>
+  <main>
+    <section id="login" class="login">
+      <label>Admin token</label>
+      <input id="token" type="password" />
+      <button id="login-btn" style="margin-top:.75rem">Entrar</button>
+    </section>
+    <section id="panel" class="hidden">
+      <p class="hint" id="status">Cargando…</p>
+      <div class="board-card" id="board-wrap">
+        <h2>Tarjeta vista desde arriba · conector de 40 pines</h2>
+        <div class="pi" id="pi-board" aria-label="Raspberry Pi con conector GPIO">
+          <div class="hdr" id="hdr" role="list"></div>
+          <div class="pi-lbl">▲ Pin 1</div>
+          <div class="cpu">CPU</div>
+          <div class="port" style="left:-1.5%;top:40%;width:6%;height:20%">SD</div>
+          <div class="port" style="right:-1.5%;top:28%;width:20%;height:17%;background:#d1d5db">Ethernet</div>
+          <div class="port" style="right:-1.5%;top:48%;width:17%;height:19%;background:#3b82f6;color:#fff">USB 3.0</div>
+          <div class="port" style="right:-1.5%;top:70%;width:17%;height:19%">USB 2.0</div>
+          <div class="port" style="left:8%;bottom:-2.5%;width:14%;height:9%">USB-C</div>
+          <div class="port" style="left:30%;bottom:-2.5%;width:11%;height:9%">HDMI 0</div>
+          <div class="port" style="left:44%;bottom:-2.5%;width:11%;height:9%">HDMI 1</div>
+          <div class="port" style="left:58%;bottom:-2.5%;width:8%;height:9%;background:#111;color:#ddd">Audio</div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#4b5563;border-color:#6b7280"></i>Libre</span>
+          <span><i style="background:#4ade80;border-color:#86efac"></i>Asignado</span>
+          <span><i style="background:#86efac;border-color:#bbf7d0;box-shadow:0 0 6px #22c55e"></i>Activo (LED / PIR)</span>
+          <span><i style="background:#dc2626;border-color:#f87171"></i>5V</span>
+          <span><i style="background:#f59e0b;border-color:#fcd34d"></i>3.3V</span>
+          <span><i style="background:#000;border-color:#666"></i>GND</span>
+        </div>
+        <p class="hint" style="margin:.55rem 0 0">
+          Vista con USB/Ethernet a la derecha y el conector arriba: fila superior = pares, inferior = impares.
+          Pasa el mouse o toca un pin para ver el detalle. Toca un pin con dispositivo para resaltar su tarjeta.
+        </p>
+      </div>
+      <div class="grid" id="devices"></div>
+    </section>
+  </main>
+  <div id="tip" role="tooltip"></div>
+  <script>
+    const DEVICE_ID = {{ device_id | tojson }};
+    const TOKEN_KEY = "gowayki_admin_token";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let lastData = null;
+    let es = null;
+    let selectedGpioId = null;
+    let tipPin = null;
+    const prevLive = {}; // gpioId → { on, changed } para destello
+    const $ = (id) => document.getElementById(id);
+    $("link-remote").href = `/remote/${DEVICE_ID}`;
+
+    // Mapa físico del conector 40 pines (igual que gpio-monitor)
+    // n → [label, gpio|null]
+    const HEADER = {
+      1: ["3V3", null], 2: ["5V", null], 3: ["SDA1", 2], 4: ["5V", null],
+      5: ["SCL1", 3], 6: ["GND", null], 7: ["GPCLK0", 4], 8: ["TXD0", 14],
+      9: ["GND", null], 10: ["RXD0", 15], 11: ["GPIO17", 17], 12: ["PCM_CLK", 18],
+      13: ["GPIO27", 27], 14: ["GND", null], 15: ["GPIO22", 22], 16: ["GPIO23", 23],
+      17: ["3V3", null], 18: ["GPIO24", 24], 19: ["MOSI", 10], 20: ["GND", null],
+      21: ["MISO", 9], 22: ["GPIO25", 25], 23: ["SCLK", 11], 24: ["CE0", 8],
+      25: ["GND", null], 26: ["CE1", 7], 27: ["ID_SD", 0], 28: ["ID_SC", 1],
+      29: ["GPIO5", 5], 30: ["GND", null], 31: ["GPIO6", 6], 32: ["GPIO12", 12],
+      33: ["GPIO13", 13], 34: ["GND", null], 35: ["PCM_FS", 19], 36: ["GPIO16", 16],
+      37: ["GPIO26", 26], 38: ["PCM_DIN", 20], 39: ["GND", null], 40: ["PCM_DOUT", 21],
+    };
+    const GPIO_TO_HEADER = {};
+    for (const [n, [, g]] of Object.entries(HEADER)) {
+      if (g !== null) GPIO_TO_HEADER[g] = Number(n);
+    }
+
+    const pinEls = {};
+    (function buildHeader() {
+      const hdr = $("hdr");
+      // grid-auto-flow: column → pares arriba, impares abajo (como gpio-monitor)
+      for (let c = 0; c < 20; c++) {
+        for (const n of [2 * c + 2, 2 * c + 1]) {
+          const i = document.createElement("i");
+          i.textContent = String(n);
+          i.dataset.pin = String(n);
+          i.setAttribute("role", "listitem");
+          i.setAttribute("aria-label", `Pin ${n}`);
+          i.addEventListener("mouseenter", () => showTip(n));
+          i.addEventListener("mouseleave", hideTip);
+          i.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const info = pinInfo(n);
+            if (info.device) {
+              selectGpio(info.device.id, { fromPin: true });
+            } else if (tipPin === n) {
+              hideTip();
+            } else {
+              showTip(n);
+            }
+          });
+          hdr.appendChild(i);
+          pinEls[n] = i;
+        }
+      }
+    })();
+
+    document.addEventListener("click", () => {
+      hideTip();
+      if (selectedGpioId) {
+        selectedGpioId = null;
+        syncHighlights();
+      }
+    });
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
+      if (token) headers["X-Admin-Token"] = token;
+      if (opts.body) headers["Content-Type"] = "application/json";
+      const res = await fetch(path, { ...opts, headers });
+      if (res.status === 401) throw new Error("Token inválido");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      return data;
+    }
+
+    function age(ts) {
+      if (!ts) return "sin datos";
+      const s = Math.max(0, Math.round(Date.now()/1000 - Number(ts)));
+      if (s < 3) return "ahora";
+      if (s < 60) return `${s}s`;
+      if (s < 3600) return `${Math.floor(s/60)}m`;
+      return `${Math.floor(s/3600)}h`;
+    }
+
+    function when(ts) {
+      if (!ts) return "—";
+      try {
+        return new Date(Number(ts) * 1000).toLocaleString("es-PE", {
+          hour: "2-digit", minute: "2-digit", second: "2-digit",
+          day: "2-digit", month: "2-digit",
+        });
+      } catch { return "—"; }
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    function shortName(name) {
+      const s = String(name || "").trim();
+      if (s.length <= 10) return s;
+      return s.slice(0, 9) + "…";
+    }
+
+    function devicesByGpio() {
+      const map = {};
+      const list = lastData?.snapshot?.devices;
+      if (!Array.isArray(list)) return map;
+      for (const g of list) {
+        if (!g || g.pin == null) continue;
+        map[Number(g.pin)] = g;
+      }
+      return map;
+    }
+
+    function pinInfo(n) {
+      const [label, gpio] = HEADER[n];
+      if (gpio === null) {
+        const gnd = label === "GND";
+        return {
+          device: null,
+          html: `<b>Pin ${n} · ${escapeHtml(label)}</b>` +
+            `<div class="r"><span>Tipo</span><span>${gnd ? "Tierra (0 V)" : "Alimentación " + escapeHtml(label)}</span></div>` +
+            `<div class="r"><span>Programable</span><span>No</span></div>`,
+        };
+      }
+      const byG = devicesByGpio();
+      const d = byG[gpio] || null;
+      const live = d?.live || {};
+      const on = !!live.on;
+      const isIn = d?.type === "entrada";
+      let status = "Libre";
+      let pill = "pn";
+      if (d) {
+        pill = "pg";
+        if (isIn) status = on ? "Movimiento" : "Asignado (sin movimiento)";
+        else status = on ? "Encendido" : "Asignado (apagado)";
+      }
+      let html = `<b>Pin ${n} · GPIO${gpio}</b>` +
+        `<span class="pill ${pill}">${escapeHtml(status)}</span>`;
+      if (d) {
+        html += `<div class="r"><span>Dispositivo</span><span style="text-align:right">${escapeHtml(d.icon || "")} ${escapeHtml(d.name || d.id)}</span></div>`;
+        html += `<div class="r"><span>Tipo</span><span>${escapeHtml(d.type || "—")}</span></div>`;
+        html += `<div class="r"><span>Estado</span><span>${escapeHtml(live.text || status)}</span></div>`;
+        if (live.count != null) html += `<div class="r"><span>${isIn ? "Activaciones" : "Cambios"}</span><span>${Number(live.count) || 0}</span></div>`;
+        if (live.changed) html += `<div class="r"><span>Último cambio</span><span>${escapeHtml(when(live.changed))} (${age(live.changed)})</span></div>`;
+      } else {
+        html += `<div class="r"><span>Nombre</span><span>${escapeHtml(label)}</span></div>`;
+        html += `<div class="r"><span>Uso</span><span>Sin dispositivo asignado</span></div>`;
+      }
+      return { device: d, html };
+    }
+
+    function showTip(n) {
+      tipPin = n;
+      const tip = $("tip");
+      tip.innerHTML = pinInfo(n).html;
+      tip.style.display = "block";
+      const el = pinEls[n];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
+      let y = r.bottom + 10;
+      if (y + h > innerHeight - 8) y = r.top - h - 10;
+      tip.style.left = x + "px";
+      tip.style.top = y + "px";
+    }
+
+    function hideTip() {
+      tipPin = null;
+      $("tip").style.display = "none";
+    }
+
+    function selectGpio(id, { fromPin } = {}) {
+      selectedGpioId = id;
+      syncHighlights();
+      const card = document.querySelector(`.dev[data-gpio="${CSS.escape(id)}"]`);
+      if (card && fromPin) {
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      if (fromPin) {
+        const g = (lastData?.snapshot?.devices || []).find((x) => x.id === id);
+        const hp = g?.header_pin ?? GPIO_TO_HEADER[g?.pin];
+        if (hp) showTip(Number(hp));
+      }
+    }
+
+    function syncHighlights() {
+      for (const el of Object.values(pinEls)) el.classList.remove("hl-pin");
+      for (const card of document.querySelectorAll(".dev")) card.classList.remove("hl-card");
+      if (!selectedGpioId) return;
+      const card = document.querySelector(`.dev[data-gpio="${CSS.escape(selectedGpioId)}"]`);
+      if (card) card.classList.add("hl-card");
+      const g = (lastData?.snapshot?.devices || []).find((x) => x.id === selectedGpioId);
+      if (!g) return;
+      const hp = Number(g.header_pin ?? GPIO_TO_HEADER[g.pin]);
+      if (hp && pinEls[hp]) pinEls[hp].classList.add("hl-pin");
+    }
+
+    function updateBoard(devices) {
+      const byGpio = {};
+      for (const g of devices || []) {
+        if (g && g.pin != null) byGpio[Number(g.pin)] = g;
+      }
+      for (let n = 1; n <= 40; n++) {
+        const el = pinEls[n];
+        const [label, gpio] = HEADER[n];
+        // Quitar etiqueta previa
+        const oldLbl = el.querySelector(".pin-lbl");
+        if (oldLbl) oldLbl.remove();
+
+        let cls = "";
+        if (gpio === null) {
+          cls = label === "GND" ? "gnd" : label === "5V" ? "p5" : "p33";
+        } else {
+          const d = byGpio[gpio];
+          if (d) {
+            const live = d.live || {};
+            const on = !!live.on;
+            const isIn = d.type === "entrada";
+            cls = "use";
+            if (on) cls += " active";
+
+            // Destello al cambiar
+            const prev = prevLive[d.id];
+            const changed = live.changed != null ? Number(live.changed) : null;
+            const flashed =
+              prev &&
+              (prev.on !== on ||
+                (changed != null && prev.changed !== changed && Date.now() / 1000 - changed < 4));
+            if (flashed || (changed != null && Date.now() / 1000 - changed < 3 && (!prev || prev.changed !== changed))) {
+              cls += " flash";
+            }
+            prevLive[d.id] = { on, changed };
+
+            const lbl = document.createElement("span");
+            lbl.className = "pin-lbl";
+            lbl.textContent = shortName(d.name || d.id);
+            el.appendChild(lbl);
+          }
+        }
+        // Conservar hl-pin si aplica
+        if (el.classList.contains("hl-pin")) cls = (cls + " hl-pin").trim();
+        el.className = cls;
+        el.setAttribute(
+          "aria-label",
+          gpio === null
+            ? `Pin ${n} · ${label}`
+            : `Pin ${n} · GPIO${gpio}` + (byGpio[gpio] ? ` · ${byGpio[gpio].name || byGpio[gpio].id}` : "")
+        );
+      }
+      if (tipPin) showTip(tipPin);
+    }
+
+    function render(data) {
+      if (!data) return;
+      // Merge parciales (SSE a veces manda solo snapshot)
+      lastData = {
+        device: data.device || lastData?.device || {},
+        gpio_updated_at: data.gpio_updated_at ?? lastData?.gpio_updated_at,
+        snapshot: data.snapshot || lastData?.snapshot || {},
+      };
+      const d = lastData.device || {};
+      $("dev-name").textContent = d.name || DEVICE_ID;
+      $("dev-id").textContent = d.id || DEVICE_ID;
+      $("badge-online").textContent = d.online ? "online" : "offline";
+      $("badge-online").className = "badge " + (d.online ? "on" : "off");
+      $("sync-age").textContent = age(lastData.gpio_updated_at);
+      const snap = lastData.snapshot || {};
+      const ok = snap.available !== false && Array.isArray(snap.devices);
+      $("badge-gpio").textContent = ok ? `gpio ${snap.devices.length}` : "gpio off";
+      $("badge-gpio").className = "badge " + (ok ? "on" : "off");
+      if (!ok) {
+        $("status").textContent = snap.error || "Sin snapshot GPIO. Revisa gpio-monitor en la Pi (:8080) y el agente ≥ 0.3.1.";
+        $("devices").innerHTML = "";
+        updateBoard([]);
+        return;
+      }
+      const pirActive = snap.devices.some((g) => g.type === "entrada" && g.live?.on);
+      $("status").textContent = pirActive
+        ? `En vivo · movimiento detectado · ${snap.devices.length} dispositivos`
+        : `En vivo · ${snap.source || "gpio-monitor"} · ${snap.devices.length} dispositivos`;
+
+      updateBoard(snap.devices);
+
+      $("devices").innerHTML = snap.devices.map((g) => {
+        const live = g.live || {};
+        const on = !!live.on;
+        const isIn = g.type === "entrada";
+        const cardClass = isIn ? (on ? "live-motion" : "") : (on ? "live-on" : "");
+        const cls = isIn ? (on ? "motion" : "off") : (on ? "on" : "off");
+        const text = live.text || (isIn ? (on ? "MOVIMIENTO" : "Sin movimiento") : (on ? "Encendido" : "Apagado"));
+        const stats = isIn ? `
+          <div class="stats">
+            <div>Activaciones: <strong>${live.count ?? 0}</strong></div>
+            <div>Último cambio: <strong>${escapeHtml(when(live.changed))}</strong> (${age(live.changed)})</div>
+            <div>Señal raw: <strong>${live.raw ?? (live.value ? 1 : 0)}</strong></div>
+          </div>` : `
+          <div class="stats">
+            <div>Cambios: <strong>${live.count ?? 0}</strong></div>
+            <div>Último: <strong>${escapeHtml(when(live.changed))}</strong> (${age(live.changed)})</div>
+          </div>`;
+        const actions = isIn ? `<span class="hint">Sensor de entrada (solo lectura)</span>` : `
+          <div class="row">
+            <button data-id="${escapeHtml(g.id)}" data-state="on" ${on ? "disabled" : ""}>ON</button>
+            <button class="secondary" data-id="${escapeHtml(g.id)}" data-state="off" ${!on ? "disabled" : ""}>OFF</button>
+            <button class="secondary" data-id="${escapeHtml(g.id)}" data-state="toggle">Toggle</button>
+          </div>`;
+        const hl = selectedGpioId === g.id ? " hl-card" : "";
+        return `<article class="dev ${cardClass}${hl}" data-gpio="${escapeHtml(g.id)}" data-header-pin="${escapeHtml(String(g.header_pin ?? GPIO_TO_HEADER[g.pin] ?? ""))}">
+          <h3>${escapeHtml(g.name || g.id)} ${escapeHtml(g.icon || "")}</h3>
+          <div class="pin">GPIO${g.pin} · pin físico ${g.header_pin ?? "?"} · ${escapeHtml(g.type)}</div>
+          <div class="state ${cls}">${escapeHtml(text)}</div>
+          ${stats}
+          ${actions}
+        </article>`;
+      }).join("");
+      syncHighlights();
+    }
+
+    function optimisticSet(id, state) {
+      const snap = lastData?.snapshot;
+      if (!snap?.devices) return;
+      const g = snap.devices.find((x) => x.id === id);
+      if (!g || g.type === "entrada") return;
+      const live = { ...(g.live || {}) };
+      let on = !!live.on;
+      if (state === "on") on = true;
+      else if (state === "off") on = false;
+      else on = !on;
+      live.on = on;
+      live.value = on;
+      live.text = on ? "Encendido" : "Apagado";
+      live.changed = Date.now() / 1000;
+      live.count = (live.count || 0) + 1;
+      g.live = live;
+      render(lastData);
+    }
+
+    async function setGpio(id, state) {
+      $("status").textContent = `Enviando ${state} → ${id}…`;
+      optimisticSet(id, state);
+      await api(`/api/admin/devices/${DEVICE_ID}/gpio/${encodeURIComponent(id)}/set`, {
+        method: "POST",
+        body: JSON.stringify({ state }),
+      });
+      // El SSE confirmará el estado real; no hacemos polling.
+    }
+
+    function connectStream() {
+      if (es) { try { es.close(); } catch (_) {} }
+      const url = `/api/admin/devices/${encodeURIComponent(DEVICE_ID)}/gpio/stream?token=${encodeURIComponent(token)}`;
+      es = new EventSource(url);
+      es.addEventListener("update", (ev) => {
+        try { render(JSON.parse(ev.data)); } catch (_) {}
+      });
+      es.onerror = () => {
+        $("live-mode").textContent = "reconectando…";
+        es.close();
+        setTimeout(() => {
+          $("live-mode").textContent = "SSE";
+          connectStream();
+        }, 2500);
+      };
+    }
+
+    $("devices").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-id]");
+      if (btn) {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        setGpio(btn.dataset.id, btn.dataset.state).catch((err) => alert(err.message));
+        return;
+      }
+      const card = e.target.closest(".dev[data-gpio]");
+      if (card) {
+        e.stopPropagation();
+        selectGpio(card.dataset.gpio);
+        const hp = Number(card.dataset.headerPin);
+        if (hp) showTip(hp);
+      }
+    });
+
+    $("devices").addEventListener("mouseover", (e) => {
+      const card = e.target.closest(".dev[data-gpio]");
+      if (!card) return;
+      const g = (lastData?.snapshot?.devices || []).find((x) => x.id === card.dataset.gpio);
+      const hp = Number(g?.header_pin ?? GPIO_TO_HEADER[g?.pin]);
+      for (const el of Object.values(pinEls)) el.classList.remove("hl-pin");
+      if (hp && pinEls[hp]) pinEls[hp].classList.add("hl-pin");
+      if (selectedGpioId) {
+        const sel = (lastData?.snapshot?.devices || []).find((x) => x.id === selectedGpioId);
+        const shp = Number(sel?.header_pin ?? GPIO_TO_HEADER[sel?.pin]);
+        if (shp && pinEls[shp]) pinEls[shp].classList.add("hl-pin");
+      }
+    });
+    $("devices").addEventListener("mouseout", (e) => {
+      const from = e.target.closest(".dev[data-gpio]");
+      const to = e.relatedTarget && e.relatedTarget.closest
+        ? e.relatedTarget.closest(".dev[data-gpio]")
+        : null;
+      if (from && from === to) return;
+      syncHighlights();
+    });
+
+    // Reloj relativo de “hace Xs” sin re-fetch
+    setInterval(() => { if (lastData) render(lastData); }, 5000);
+
+    async function login() {
+      token = $("token").value.trim();
+      if (!token) return alert("Token requerido");
+      localStorage.setItem(TOKEN_KEY, token);
+      const data = await api(`/api/admin/devices/${DEVICE_ID}/gpio`);
+      render(data);
+      $("login").classList.add("hidden");
+      $("panel").classList.remove("hidden");
+      connectStream();
+    }
+
+    $("login-btn").addEventListener("click", () => login().catch((e) => alert(e.message)));
+    if (token) { $("token").value = token; login().catch(() => {}); }
+  </script>
+</body>
+</html>

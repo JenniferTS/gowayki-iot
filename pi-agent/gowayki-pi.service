@@ -1,0 +1,22 @@
+[Unit]
+Description=GoWayki Pi IoT agent (HTTP pair + MQTT)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gowayki_user
+Group=gowayki_user
+WorkingDirectory=/opt/gowayki-pi
+EnvironmentFile=-/etc/gowayki/agent.env
+ExecStart=/opt/gowayki-pi/venv/bin/python /opt/gowayki-pi/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Allow reboot command without interactive password (configure sudoers separately if needed)
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target
