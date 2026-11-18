@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — GoWayki Pi agent (MQTT client → VM broker; NO local Mosquitto)
-# Uso (repo privado): curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
+# Uso: curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
 set -euo pipefail
 
 PANEL_URL="${PANEL_URL:-${API_BASE_URL:-https://paradero.172-214-154-175.sslip.io}}"
