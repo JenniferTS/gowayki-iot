@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.api import admin, kiosk
+from app.api import admin, internal, kiosk
 from app.config import get_settings
 from app.db import AppDatabase
 from app.services.events import EventHub, ParaderoHub
@@ -135,6 +135,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GoWayki IoT Panel", version="0.1.0", lifespan=lifespan)
 app.include_router(kiosk.router)
 app.include_router(admin.router)
+app.include_router(internal.router)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 if PI_AGENT_DIR.is_dir():
     # Público: curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
@@ -280,28 +281,17 @@ async def paradero_page(
         x_admin_token=x_admin_token,
     )
     db: AppDatabase = request.app.state.db
-
-    stop = None
-    routes: list[dict[str, Any]] = []
-    gtfs: GtfsService = request.app.state.gtfs
-    if device.get("stop_id") and gtfs.available:
-        stop = gtfs.get_stop(device["stop_id"])
-        routes = gtfs.routes_for_stop(device["stop_id"])
-
     settings = get_settings()
-    from app.services.media import with_public_ad_urls
-
-    ads = with_public_ad_urls(await db.list_ads(), settings.root_path_normalized)
-    settings_map = await db.get_settings_map()
+    payload = await build_paradero_payload(db, request.app.state.gtfs, device)
     resp = templates.TemplateResponse(
         request,
         "paradero.html",
         {
             "device": device,
-            "stop": stop,
-            "routes": routes,
-            "ads": ads,
-            "idle_seconds": settings_map["idle_seconds"],
+            "stop": payload.get("stop"),
+            "routes": payload.get("routes") or [],
+            "ads": payload.get("ads") or [],
+            "idle_seconds": payload.get("idle_seconds", 45),
             "base_url": settings.base_url,
         },
     )

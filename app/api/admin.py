@@ -33,12 +33,15 @@ class CreateDeviceBody(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     stop_id: str | None = None
     device_type: str = Field(default="kiosk", pattern="^(kiosk|pi)$")
+    # ID numérico del Paradero en Django (playlist de campañas pagadas)
+    django_paradero_id: int | None = None
 
 
 class UpdateDeviceBody(BaseModel):
     name: str | None = None
     stop_id: str | None = None
     device_type: str | None = Field(default=None, pattern="^(kiosk|pi)$")
+    django_paradero_id: int | None = None
 
 
 class CommandBody(BaseModel):
@@ -142,6 +145,7 @@ async def create_device(
         stop_id=body.stop_id,
         device_type=body.device_type,
         base_url=settings.base_url,
+        django_paradero_id=body.django_paradero_id,
     )
     return _enrich(device, settings)
 
@@ -163,7 +167,9 @@ async def update_device(
         name=data.get("name"),
         stop_id=data.get("stop_id"),
         device_type=data.get("device_type"),
+        django_paradero_id=data.get("django_paradero_id"),
         update_stop="stop_id" in data,
+        update_django_paradero="django_paradero_id" in data,
     )
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")

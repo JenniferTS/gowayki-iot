@@ -47,6 +47,14 @@ class Settings(BaseSettings):
     # Segundos de inactividad antes del salvapantallas de anuncios
     default_idle_seconds: int = 45
 
+    # Paradero Digital (Django): playlist de anuncios pagados/aprobados
+    # Vacío = solo playlist local SQLite del FastAPI
+    django_url: str = ""
+    # Mismo valor que PANEL_IOT_TOKEN en Django / .env del panel Node
+    django_panel_token: str = ""
+    # Timeout HTTP al pedir /api/paraderos/<id>/playlist/
+    django_timeout_sec: float = 4.0
+
     @property
     def ad_urls(self) -> list[str]:
         if not self.ad_playlist_urls.strip():

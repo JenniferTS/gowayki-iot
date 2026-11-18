@@ -101,6 +101,7 @@ MIGRATE_SQL = [
     "ALTER TABLE devices ADD COLUMN gpio_updated_at REAL",
     "ALTER TABLE devices ADD COLUMN pair_code TEXT",
     "ALTER TABLE devices ADD COLUMN reported_display_url TEXT",
+    "ALTER TABLE devices ADD COLUMN django_paradero_id INTEGER",
 ]
 
 
@@ -223,6 +224,7 @@ class AppDatabase:
         stop_id: str | None,
         device_type: str,
         base_url: str,
+        django_paradero_id: int | None = None,
     ) -> dict[str, Any]:
         now = time.time()
         device_id = new_device_id()
@@ -231,10 +233,20 @@ class AppDatabase:
         await self.conn.execute(
             """
             INSERT INTO devices
-              (id, name, device_type, stop_id, display_url, pair_code, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (id, name, device_type, stop_id, display_url, pair_code, django_paradero_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (device_id, name, device_type, stop_id, display_url, pair_code, now, now),
+            (
+                device_id,
+                name,
+                device_type,
+                stop_id,
+                display_url,
+                pair_code,
+                django_paradero_id,
+                now,
+                now,
+            ),
         )
         await self.conn.commit()
         return await self.get_device(device_id)  # type: ignore[return-value]
@@ -246,26 +258,47 @@ class AppDatabase:
         name: str | None = None,
         stop_id: str | None = None,
         device_type: str | None = None,
+        django_paradero_id: int | None = None,
         update_stop: bool = False,
+        update_django_paradero: bool = False,
     ) -> dict[str, Any] | None:
         device = await self.get_device(device_id)
         if not device:
             return None
         now = time.time()
         new_stop = (stop_id or None) if update_stop else device.get("stop_id")
+        if update_django_paradero:
+            new_dj = django_paradero_id
+        else:
+            new_dj = device.get("django_paradero_id")
         await self.conn.execute(
             """
             UPDATE devices
             SET name = COALESCE(?, name),
                 stop_id = ?,
                 device_type = COALESCE(?, device_type),
+                django_paradero_id = ?,
                 updated_at = ?
             WHERE id = ?
             """,
-            (name, new_stop if update_stop else device.get("stop_id"), device_type, now, device_id),
+            (
+                name,
+                new_stop if update_stop else device.get("stop_id"),
+                device_type,
+                new_dj,
+                now,
+                device_id,
+            ),
         )
         await self.conn.commit()
         return await self.get_device(device_id)
+
+    async def list_devices_by_django_paradero(self, paradero_id: int) -> list[dict[str, Any]]:
+        cur = await self.conn.execute(
+            "SELECT * FROM devices WHERE django_paradero_id = ? ORDER BY created_at DESC",
+            (int(paradero_id),),
+        )
+        return [dict(r) for r in await cur.fetchall()]
 
     async def list_devices(self) -> list[dict[str, Any]]:
         cur = await self.conn.execute(
