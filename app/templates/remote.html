@@ -83,7 +83,7 @@
     <div class="row">
       <span id="badge-online" class="badge off">offline</span>
       <span id="badge-mqtt" class="badge off">mqtt off</span>
-      <a href="/admin">← Admin</a>
+      <a href="{{ root_path }}/admin">← Admin</a>
     </div>
   </header>
 
@@ -102,7 +102,7 @@
         <button type="button" data-q="uname -a; hostname; uptime">sysinfo</button>
         <button type="button" data-q="journalctl -u gowayki-pi -n 40 --no-pager">logs agente</button>
         <button type="button" data-q="cat /etc/gowayki/agent.env">agent.env</button>
-        <button type="button" data-q="curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/main.py -o /opt/gowayki-pi/main.py && systemctl restart gowayki-pi && echo UPGRADED">upgrade agente</button>
+        <button type="button" data-q="curl -fsSL {{ base_url }}/pi/main.py -o /opt/gowayki-pi/main.py && systemctl restart gowayki-pi && echo UPGRADED">upgrade agente</button>
         <button type="button" data-q="free -h; df -h /">mem/disk</button>
       </div>
       <div class="row">
@@ -117,6 +117,8 @@
   <script>
     const DEVICE_ID = {{ device_id | tojson }};
     const BASE = {{ base_url | tojson }};
+    const ROOT = {{ root_path|tojson }};
+    const u = (path) => ROOT + path;
     const TOKEN_KEY = "gowayki_admin_token";
     let token = localStorage.getItem(TOKEN_KEY) || "";
 
@@ -126,7 +128,7 @@
       const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
       if (token) headers["X-Admin-Token"] = token;
       if (opts.body) headers["Content-Type"] = "application/json";
-      const res = await fetch(path, { ...opts, headers });
+      const res = await fetch(u(path), { ...opts, headers });
       if (res.status === 401) throw new Error("Token inválido");
       const text = await res.text();
       let data = null;

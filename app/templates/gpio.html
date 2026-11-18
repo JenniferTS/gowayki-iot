@@ -168,7 +168,7 @@
     <div class="row">
       <span id="badge-online" class="badge off">offline</span>
       <span id="badge-gpio" class="badge off">gpio ?</span>
-      <a href="/admin">← Admin</a>
+      <a href="{{ root_path }}/admin">← Admin</a>
       <a id="link-remote" href="#">Consola</a>
     </div>
   </header>
@@ -214,6 +214,8 @@
   <div id="tip" role="tooltip"></div>
   <script>
     const DEVICE_ID = {{ device_id | tojson }};
+    const ROOT = {{ root_path|tojson }};
+    const u = (path) => ROOT + path;
     const TOKEN_KEY = "gowayki_admin_token";
     let token = localStorage.getItem(TOKEN_KEY) || "";
     let lastData = null;
@@ -285,7 +287,7 @@
       const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
       if (token) headers["X-Admin-Token"] = token;
       if (opts.body) headers["Content-Type"] = "application/json";
-      const res = await fetch(path, { ...opts, headers });
+      const res = await fetch(u(path), { ...opts, headers });
       if (res.status === 401) throw new Error("Token inválido");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.detail || res.statusText);
@@ -569,7 +571,7 @@
 
     function connectStream() {
       if (es) { try { es.close(); } catch (_) {} }
-      const url = `/api/admin/devices/${encodeURIComponent(DEVICE_ID)}/gpio/stream?token=${encodeURIComponent(token)}`;
+      const url = u(`/api/admin/devices/${encodeURIComponent(DEVICE_ID)}/gpio/stream?token=${encodeURIComponent(token)}`);
       es = new EventSource(url);
       es.addEventListener("update", (ev) => {
         try { render(JSON.parse(ev.data)); } catch (_) {}

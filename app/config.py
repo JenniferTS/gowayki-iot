@@ -6,7 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    base_url: str = "https://paradero.172-214-154-175.sslip.io"
+    # URL pública del panel (incluye prefijo si va detrás de nginx, ej. .../iot)
+    base_url: str = "https://paradero.172-214-154-175.sslip.io/iot"
+    # Prefijo público cuando nginx hace strip (ej. /iot). Vacío = raíz (dev local).
+    root_path: str = ""
     database_url: str = ""
     app_db_path: str = "./data/iot.db"
     admin_token: str = "change-me"
@@ -16,6 +19,13 @@ class Settings(BaseSettings):
     pairing_ttl_minutes: int = 10
     pair_rate_limit_per_minute: int = 5
     online_threshold_seconds: int = 120
+
+    @property
+    def root_path_normalized(self) -> str:
+        p = (self.root_path or "").strip().rstrip("/")
+        if p and not p.startswith("/"):
+            p = f"/{p}"
+        return p
 
     # MQTT (Mosquitto de la VM) — leave mqtt_host empty to disable bridge
     mqtt_host: str = ""

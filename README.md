@@ -2,13 +2,19 @@
 
 Backend del quiosco de paradero para tablets Android (app Flutter) y, en fase 2, agentes Raspberry Pi.
 
-- Dominio: `https://paradero.172-214-154-175.sslip.io`
+Integrado en el **Paradero Digital** del grupo (`feat/paradero-digital`) bajo el prefijo **`/iot`**:
+
+- Dominio: `https://paradero.172-214-154-175.sslip.io/iot`
+- Admin: `https://paradero.172-214-154-175.sslip.io/iot/admin`
 - Repo: `https://github.com/JenniferTS/gowayki-iot`
 - Contrato app: ver app Flutter `operative/gowayki-iot/docs/api-kiosco.md`
 
+En la VM, el instalador del paradero clona este repo, levanta uvicorn en `:8002` y nginx publica `/iot/`.
+Variable clave: `ROOT_PATH=/iot` (los enlaces y el JS anteponen ese prefijo; nginx hace strip).
+
 ## Qué incluye
 
-| Ruta | Uso |
+| Ruta (detrás de `/iot`) | Uso |
 |------|-----|
 | `POST /api/kiosk/pair` | Vincular tablet/Pi con código 6 dígitos |
 | `POST /api/kiosk/heartbeat` | Latido + comandos `reload` / `unpair` / `reboot` |
@@ -26,7 +32,8 @@ Ver [`.env.example`](.env.example). **No subi secrets al repo.**
 | `APP_DB_PATH` | SQLite del panel, ej. `/data/iot.db` (volumen persistente) |
 | `ADMIN_TOKEN` | Token del panel `/admin` |
 | `SECRET_KEY` | Secreto interno |
-| `BASE_URL` | `https://paradero.172-214-154-175.sslip.io` |
+| `BASE_URL` | `https://paradero.172-214-154-175.sslip.io/iot` |
+| `ROOT_PATH` | `/iot` en la VM (vacío en local) |
 | `AD_PLAYLIST_URLS` | Semilla inicial (coma-separada) si la BD está vacía; luego se gestiona en `/admin` |
 
 ## Playlist de anuncios
@@ -58,10 +65,12 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env   # completar DATABASE_URL y tokens
 set APP_DB_PATH=./data/iot.db
+# Local sin prefijo:
+# ROOT_PATH=  (vacío) en .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Abrir `http://127.0.0.1:8000/admin`.
+Abrir `http://127.0.0.1:8000/admin`. En producción: `…/iot/admin`.
 
 ## Docker
 

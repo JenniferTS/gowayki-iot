@@ -432,7 +432,7 @@
         <p class="hint">Código fijo (no expira):</p>
         <div class="code-box" id="pi-code">------</div>
         <p class="hint" style="margin-top:.85rem">Instalación (una vez en la Pi):</p>
-        <pre style="background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;margin:0">curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash</pre>
+        <pre style="background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;margin:0">curl -fsSL {{ base_url }}/pi/install.sh | sudo bash</pre>
         <p class="hint" style="margin-top:.75rem">Vincular:</p>
         <pre id="pi-pair-cmd" style="background:#0b1220;color:#e8eef9;padding:.85rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;margin:0"></pre>
       </div>
@@ -504,17 +504,19 @@
   </div>
 
   <script>
+    const ROOT = {{ root_path|tojson }};
     const TOKEN_KEY = "gowayki_iot_admin_token";
     const TAB_KEY = "gowayki_iot_admin_tab";
     let token = localStorage.getItem(TOKEN_KEY) || "";
     let loaded = { overview: false, devices: false, ads: false, settings: false, mqttusers: false };
 
     const $ = (id) => document.getElementById(id);
+    const u = (path) => ROOT + path;
 
     async function api(path, opts = {}) {
       const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
       headers["X-Admin-Token"] = token;
-      const res = await fetch(path, { ...opts, headers });
+      const res = await fetch(u(path), { ...opts, headers });
       if (res.status === 401) throw new Error("unauthorized");
       const text = await res.text();
       let data = null;
@@ -607,7 +609,7 @@
       try {
         await api("/api/admin/devices");
         localStorage.setItem(TOKEN_KEY, token);
-        document.cookie = `admin_token=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
+        document.cookie = `admin_token=${encodeURIComponent(token)}; path=${ROOT || "/"}; SameSite=Lax`;
         $("login-error").textContent = "";
         loaded = { overview: false, devices: false, ads: false, settings: false };
         showApp(true);
@@ -681,7 +683,7 @@
 
     function openPreview(id, name) {
       previewDeviceId = id;
-      const url = `/paradero/${encodeURIComponent(id)}`;
+      const url = u(`/paradero/${encodeURIComponent(id)}`);
       $("preview-title").textContent = name || "Vista previa";
       $("preview-id").textContent = id;
       $("preview-open").href = url;
@@ -725,8 +727,8 @@
             ${d.device_type !== "pi" ? `<button class="secondary" data-act="preview" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-url="${escapeHtml(d.display_url || "")}">Ver pantalla</button>` : ""}
             <button data-act="code" data-id="${d.id}" data-type="${escapeHtml(d.device_type)}" data-code="${escapeHtml(d.pair_code || "")}" data-name="${escapeHtml(d.name)}">Ver código</button>
             <button class="secondary" data-act="stop" data-id="${d.id}" data-name="${escapeHtml(d.name)}" data-stop="${escapeHtml(d.stop_id || "")}">Parada</button>
-            ${d.device_type === "pi" ? `<a class="btn-link" href="/remote/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">Consola</a>` : ""}
-            ${d.device_type === "pi" ? `<a class="btn-link" href="/gpio/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">GPIO</a>` : ""}
+            ${d.device_type === "pi" ? `<a class="btn-link" href="${ROOT}/remote/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">Consola</a>` : ""}
+            ${d.device_type === "pi" ? `<a class="btn-link" href="${ROOT}/gpio/${encodeURIComponent(d.id)}" target="_blank" rel="noopener">GPIO</a>` : ""}
             <button class="secondary" data-act="reload" data-id="${d.id}">Reload</button>
             <button class="secondary" data-act="reboot" data-id="${d.id}">Reboot</button>
             <button class="secondary" data-act="unpair" data-id="${d.id}">Unpair</button>
@@ -1113,7 +1115,7 @@
     $("preview-port").addEventListener("click", () => setPreviewOrient("portrait"));
     $("preview-reload").addEventListener("click", () => {
       const frame = $("preview-iframe");
-      if (previewDeviceId) frame.src = `/paradero/${encodeURIComponent(previewDeviceId)}?_=${Date.now()}`;
+      if (previewDeviceId) frame.src = u(`/paradero/${encodeURIComponent(previewDeviceId)}?_=${Date.now()}`);
     });
     // Al cerrar el modal, soltar el iframe para cortar el SSE.
     const previewModal = $("modal-preview");

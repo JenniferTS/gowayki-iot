@@ -37,12 +37,20 @@ def _asset_version() -> str:
     return h.hexdigest()[:10]
 
 
-templates.env.globals["asset_v"] = _asset_version()
+def _refresh_template_globals() -> None:
+    settings = get_settings()
+    templates.env.globals["asset_v"] = _asset_version()
+    templates.env.globals["root_path"] = settings.root_path_normalized
+    templates.env.globals["base_url"] = settings.base_url.rstrip("/")
+
+
+_refresh_template_globals()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    _refresh_template_globals()
     db = AppDatabase(settings.app_db_path)
     await db.connect()
     await db.seed_demo_ads_if_empty(settings)

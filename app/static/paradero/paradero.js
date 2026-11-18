@@ -2,6 +2,7 @@
   "use strict";
 
   const cfg = window.__PARADERO__ || {};
+  const ROOT = cfg.rootPath || "";
   const DEFAULT_COLOR = "0EA5E9";
   const VIDEO_GRACE_MS = 5000;
   const FAILED_SKIP_MS = 1500;
@@ -191,9 +192,9 @@
     tiles.addTo(map);
 
     const icon = L.icon({
-      iconUrl: "/static/paradero/vendor/leaflet/images/marker-icon.png",
-      iconRetinaUrl: "/static/paradero/vendor/leaflet/images/marker-icon-2x.png",
-      shadowUrl: "/static/paradero/vendor/leaflet/images/marker-shadow.png",
+      iconUrl: ROOT + "/static/paradero/vendor/leaflet/images/marker-icon.png",
+      iconRetinaUrl: ROOT + "/static/paradero/vendor/leaflet/images/marker-icon-2x.png",
+      shadowUrl: ROOT + "/static/paradero/vendor/leaflet/images/marker-shadow.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
@@ -707,7 +708,7 @@
 
   function connectStream() {
     if (!cfg.deviceId || typeof EventSource === "undefined") return;
-    const url = "/api/paradero/" + encodeURIComponent(cfg.deviceId) + "/stream";
+    const url = ROOT + "/api/paradero/" + encodeURIComponent(cfg.deviceId) + "/stream";
     const es = new EventSource(url, { withCredentials: true });
     es.addEventListener("update", function (ev) {
       try {

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#071018" />
   <title>{{ device.name or 'Paradero' }} · GoWayki</title>
-  <link rel="stylesheet" href="/static/paradero/vendor/leaflet/leaflet.css?v={{ asset_v }}" />
-  <link rel="stylesheet" href="/static/paradero/paradero.css?v={{ asset_v }}" />
+  <link rel="stylesheet" href="{{ root_path }}/static/paradero/vendor/leaflet/leaflet.css?v={{ asset_v }}" />
+  <link rel="stylesheet" href="{{ root_path }}/static/paradero/paradero.css?v={{ asset_v }}" />
 </head>
 <body>
   <div id="rotate-hint" class="rotate-hint" aria-live="polite">
@@ -91,10 +91,11 @@
       ads: {{ ads|tojson }},
       routes: {{ routes|tojson }},
       stop: {{ stop|tojson }},
-      idleSeconds: {{ idle_seconds|default(45)|tojson }}
+      idleSeconds: {{ idle_seconds|default(45)|tojson }},
+      rootPath: {{ root_path|tojson }}
     };
   </script>
-  <script src="/static/paradero/vendor/leaflet/leaflet.js?v={{ asset_v }}"></script>
-  <script src="/static/paradero/paradero.js?v={{ asset_v }}"></script>
+  <script src="{{ root_path }}/static/paradero/vendor/leaflet/leaflet.js?v={{ asset_v }}"></script>
+  <script src="{{ root_path }}/static/paradero/paradero.js?v={{ asset_v }}"></script>
 </body>
 </html>

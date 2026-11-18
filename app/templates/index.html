@@ -28,8 +28,8 @@
     <h1>GoWayki IoT</h1>
     <p>Panel de quioscos y dispositivos de paradero. La tablet Flutter se vincula con un código de 6 dígitos y muestra la página del paradero.</p>
     <p style="margin-top:1.25rem;font-size:.95rem">Raspberry Pi — instalar agente:</p>
-    <pre style="background:#061018;padding:.9rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;color:#cfe8f5">curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash</pre>
-    <a href="/admin">Abrir panel admin</a>
+    <pre style="background:#061018;padding:.9rem 1rem;border-radius:.5rem;overflow:auto;font-size:.8rem;color:#cfe8f5">curl -fsSL {{ base_url }}/pi/install.sh | sudo bash</pre>
+    <a href="{{ root_path }}/admin">Abrir panel admin</a>
   </main>
 </body>
 </html>
