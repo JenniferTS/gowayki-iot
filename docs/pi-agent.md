@@ -33,7 +33,7 @@ from pathlib import Path
 
 import httpx
 
-API = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+API = os.environ.get("API_BASE_URL", "https://paradero.172-214-154-175.sslip.io").rstrip("/")
 STATE = Path.home() / ".gowayki_iot_session.json"
 
 

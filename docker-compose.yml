@@ -4,21 +4,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      BASE_URL: ${BASE_URL:-http://127.0.0.1:8000}
-      DATABASE_URL: ${DATABASE_URL:-}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-change-me-long-random}
-      SECRET_KEY: ${SECRET_KEY:-change-me-another-long-random}
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      DATABASE_URL: ${DATABASE_URL}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      SECRET_KEY: ${SECRET_KEY}
       APP_DB_PATH: /data/iot.db
       AD_PLAYLIST_URLS: ${AD_PLAYLIST_URLS:-}
-      MQTT_HOST: ${MQTT_HOST:-}
-      MQTT_PORT: ${MQTT_PORT:-1883}
-      MQTT_USER: ${MQTT_USER:-}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
-      MQTT_TOPIC_PREFIX: ${MQTT_TOPIC_PREFIX:-gowayki}
-      MQTT_GPIO_PREFIX: ${MQTT_GPIO_PREFIX:-paradero}
-      MQTT_AUTH_DIR: ${MQTT_AUTH_DIR:-}
-      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-localhost}
-      MQTT_PUBLIC_PORT: ${MQTT_PUBLIC_PORT:-1883}
     volumes:
       - iot_data:/data
     restart: unless-stopped

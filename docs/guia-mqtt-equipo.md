@@ -9,7 +9,7 @@ El administrador crea tu usuario en `/admin` → pestaña **Usuarios MQTT** y te
 
 | Dato | Valor |
 |---|---|
-| Host | el que te pasa el admin (ej. `localhost` en lab) |
+| Host | `172-214-154-175.sslip.io` *(placeholder: el admin te da el host real)* |
 | Puerto | `1883` |
 | Usuario | tu usuario (ej. `ana`) |
 | Contraseña | se muestra **una sola vez**; guárdala. Si la pierdes, pide "Regenerar contraseña". |
@@ -22,7 +22,7 @@ El administrador crea tu usuario en `/admin` → pestaña **Usuarios MQTT** y te
 2. **+ Connections** → nueva conexión:
    - **Name:** GoWayki
    - **Protocol:** `mqtt://`
-   - **Host:** el que te pasó el admin
+   - **Host:** `172-214-154-175.sslip.io` (reemplazar por el host real)
    - **Port:** `1883`
    - **Validate certificate / Encryption (tls):** desactivados
    - **Username / Password:** los tuyos

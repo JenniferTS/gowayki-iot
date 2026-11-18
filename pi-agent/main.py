@@ -11,8 +11,8 @@ from pathlib import Path
 import httpx
 import paho.mqtt.client as mqtt
 
-API = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
-MQTT_HOST = os.environ.get("MQTT_HOST", "localhost")
+API = os.environ.get("API_BASE_URL", "https://paradero.172-214-154-175.sslip.io").rstrip("/")
+MQTT_HOST = os.environ.get("MQTT_HOST", "172-214-154-175.sslip.io")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")

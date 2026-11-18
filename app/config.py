@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    base_url: str = "http://127.0.0.1:8000"
+    base_url: str = "https://paradero.172-214-154-175.sslip.io"
     database_url: str = ""
     app_db_path: str = "./data/iot.db"
     admin_token: str = "change-me"
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     pair_rate_limit_per_minute: int = 5
     online_threshold_seconds: int = 120
 
-    # MQTT — leave mqtt_host empty to disable bridge
+    # MQTT (Mosquitto de la VM) — leave mqtt_host empty to disable bridge
     mqtt_host: str = ""
     mqtt_port: int = 1883
     mqtt_user: str = ""
@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     # Directorio compartido con el contenedor Mosquitto (passwd/acl dinámicos).
     # Vacío = la pestaña "Usuarios MQTT" guarda en SQLite pero no publica archivos.
     mqtt_auth_dir: str = ""
-    # Host que se muestra a los usuarios del equipo
-    mqtt_public_host: str = "localhost"
+    # Host que se muestra a los usuarios del equipo (placeholder; no poner IPs en el repo)
+    mqtt_public_host: str = "172-214-154-175.sslip.io"
     mqtt_public_port: int = 1883
 
     # Feed GTFS local (pruebas sin Postgres). Ej: /workspace/gtfs

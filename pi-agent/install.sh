@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# install.sh — GoWayki Pi agent (MQTT client → broker remoto; NO Mosquitto local)
-# Uso: curl -fsSL http://127.0.0.1:8000/pi/install.sh | sudo bash
+# install.sh — GoWayki Pi agent (MQTT client → VM broker; NO local Mosquitto)
+# Uso (repo privado): curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
 set -euo pipefail
 
-PANEL_URL="${PANEL_URL:-${API_BASE_URL:-http://127.0.0.1:8000}}"
+PANEL_URL="${PANEL_URL:-${API_BASE_URL:-https://paradero.172-214-154-175.sslip.io}}"
 PANEL_URL="${PANEL_URL%/}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/gowayki-pi}"
 SERVICE_USER="${SERVICE_USER:-gowayki_user}"
 API_BASE_URL="${API_BASE_URL:-$PANEL_URL}"
-MQTT_HOST="${MQTT_HOST:-localhost}"
+MQTT_HOST="${MQTT_HOST:-172-214-154-175.sslip.io}"
 MQTT_PORT="${MQTT_PORT:-1883}"
 
 echo ">>> GoWayki Pi agent installer"

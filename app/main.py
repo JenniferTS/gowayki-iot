@@ -129,7 +129,7 @@ app.include_router(kiosk.router)
 app.include_router(admin.router)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 if PI_AGENT_DIR.is_dir():
-    # Público: curl -fsSL $BASE_URL/pi/install.sh | sudo bash
+    # Público: curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
     app.mount("/pi", StaticFiles(directory=str(PI_AGENT_DIR), html=False), name="pi")
 
 

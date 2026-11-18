@@ -2,7 +2,7 @@
 # Entrypoint de Mosquitto para GoWayki IoT (eclipse-mosquitto:2, busybox sh).
 #
 # - Usuarios base (gowayki-iot, raspberry-pi, healthcheck) vienen de la env
-#   MOSQUITTO_PASSWD_B64 (broker), igual que antes.
+#   MOSQUITTO_PASSWD_B64 (VM), igual que antes.
 # - Usuarios del equipo los escribe el panel en el directorio compartido
 #   $AUTH_DIR (passwd.dynamic, acl.dynamic, .version).
 # - Un watcher revisa .version cada $WATCH_INTERVAL s; si cambió, fusiona

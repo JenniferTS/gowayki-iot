@@ -10,7 +10,7 @@
 const char* WIFI_SSID     = "TU_WIFI";
 const char* WIFI_PASSWORD = "TU_PASSWORD_WIFI";
 
-const char* MQTT_HOST     = "localhost";       // host que te da el admin
+const char* MQTT_HOST     = "172-214-154-175.sslip.io";      // placeholder: host que te da el admin
 const uint16_t MQTT_PORT  = 1883;
 const char* MQTT_USER     = "TU_USUARIO";      // ej. "ana"
 const char* MQTT_PASSWORD = "TU_PASSWORD_MQTT";

@@ -1,8 +1,10 @@
 # GoWayki IoT Panel
 
-Backend del quiosco de paradero para tablets Android (app Flutter) y agentes Raspberry Pi.
+Backend del quiosco de paradero para tablets Android (app Flutter) y, en fase 2, agentes Raspberry Pi.
 
-Panel local de desarrollo: `http://127.0.0.1:8000`
+- Dominio: `https://paradero.172-214-154-175.sslip.io`
+- Repo: `https://github.com/JenniferTS/gowayki-iot`
+- Contrato app: ver app Flutter `operative/gowayki-iot/docs/api-kiosco.md`
 
 ## Qué incluye
 
@@ -11,22 +13,21 @@ Panel local de desarrollo: `http://127.0.0.1:8000`
 | `POST /api/kiosk/pair` | Vincular tablet/Pi con código 6 dígitos |
 | `POST /api/kiosk/heartbeat` | Latido + comandos `reload` / `unpair` / `reboot` |
 | `/paradero/{id}` | Pantalla rutas GTFS + playlist de ads |
-| `/admin` | Panel (crear dispositivo, código, comandos, anuncios, MQTT) |
+| `/admin` | Panel mínimo (crear dispositivo, código, comandos) |
 | `/health` | Healthcheck |
 
 ## Variables de entorno
 
-Ver [`.env.example`](.env.example). **No subas secrets al repo.**
+Ver [`.env.example`](.env.example). **No subi secrets al repo.**
 
 | Variable | Descripción |
 |----------|-------------|
-| `DATABASE_URL` | Postgres GTFS (solo lectura); vacío si usás feed local |
-| `APP_DB_PATH` | SQLite del panel, ej. `./data/iot.db` o `/data/iot.db` |
+| `DATABASE_URL` | Postgres **gtfs-arequipa** (solo lectura) |
+| `APP_DB_PATH` | SQLite del panel, ej. `/data/iot.db` (volumen persistente) |
 | `ADMIN_TOKEN` | Token del panel `/admin` |
 | `SECRET_KEY` | Secreto interno |
-| `BASE_URL` | URL pública del panel |
-| `AD_PLAYLIST_URLS` | Semilla inicial (coma-separada) si la BD está vacía |
-| `MQTT_HOST` | Broker MQTT; vacío = bridge desactivado |
+| `BASE_URL` | `https://paradero.172-214-154-175.sslip.io` |
+| `AD_PLAYLIST_URLS` | Semilla inicial (coma-separada) si la BD está vacía; luego se gestiona en `/admin` |
 
 ## Playlist de anuncios
 
@@ -39,24 +40,24 @@ En `/admin` → **Anuncios**:
 
 ## Raspberry Pi
 
-Con el panel corriendo:
+Instalación (sin clonar el repo privado):
 
 ```bash
-curl -fsSL http://127.0.0.1:8000/pi/install.sh | sudo bash
+curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
 echo CODIGO | sudo tee /etc/gowayki/pair.code
 sudo systemctl restart gowayki-pi
 ```
 
-Detalle: [`pi-agent/README.md`](pi-agent/README.md).
+Detalle: [`pi-agent/README.md`](pi-agent/README.md). MQTT: Mosquitto en la VM del grupo en `MQTT_HOST:1883`.
 
 ## Desarrollo local
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+.venv\Scripts\activate   # Windows
 pip install -r requirements.txt
-cp .env.example .env        # completar tokens (y DATABASE_URL si hay GTFS)
-export APP_DB_PATH=./data/iot.db
+copy .env.example .env   # completar DATABASE_URL y tokens
+set APP_DB_PATH=./data/iot.db
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -67,16 +68,14 @@ Abrir `http://127.0.0.1:8000/admin`.
 ```bash
 docker build -t gowayki-iot .
 docker run --rm -p 8000:8000 \
-  -e DATABASE_URL=postgres://.../gtfs \
+  -e DATABASE_URL=postgres://.../gtfs-arequipa \
   -e ADMIN_TOKEN=... \
   -e SECRET_KEY=... \
-  -e BASE_URL=http://127.0.0.1:8000 \
+  -e BASE_URL=https://paradero.172-214-154-175.sslip.io \
   -e APP_DB_PATH=/data/iot.db \
   -v iot_data:/data \
   gowayki-iot
 ```
-
-O con Compose: `docker compose up --build`.
 
 ## Flujo operativo
 
@@ -85,8 +84,6 @@ O con Compose: `docker compose up --build`.
 3. En la tablet Flutter ingresar el código → abre `/paradero/{id}`.
 4. Desde admin: Reload / Unpair / Reboot (Pi).
 
-## Docs
+## Raspberry Pi (fase 2 — esqueleto)
 
-- Agente Pi: [`docs/pi-agent.md`](docs/pi-agent.md) y [`pi-agent/README.md`](pi-agent/README.md)
-- MQTT del equipo: [`docs/guia-mqtt-equipo.md`](docs/guia-mqtt-equipo.md)
-- Arquitectura usuarios MQTT: [`docs/mqtt-usuarios-arquitectura.md`](docs/mqtt-usuarios-arquitectura.md)
+Ver [`docs/pi-agent.md`](docs/pi-agent.md). El backend ya acepta `device_type=pi` y el comando `reboot` en heartbeat.

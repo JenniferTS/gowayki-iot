@@ -102,7 +102,7 @@
         <button type="button" data-q="uname -a; hostname; uptime">sysinfo</button>
         <button type="button" data-q="journalctl -u gowayki-pi -n 40 --no-pager">logs agente</button>
         <button type="button" data-q="cat /etc/gowayki/agent.env">agent.env</button>
-        <button type="button" data-q="curl -fsSL http://127.0.0.1:8000/pi/main.py -o /opt/gowayki-pi/main.py && systemctl restart gowayki-pi && echo UPGRADED">upgrade agente</button>
+        <button type="button" data-q="curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/main.py -o /opt/gowayki-pi/main.py && systemctl restart gowayki-pi && echo UPGRADED">upgrade agente</button>
         <button type="button" data-q="free -h; df -h /">mem/disk</button>
       </div>
       <div class="row">
