@@ -288,7 +288,10 @@ async def paradero_page(
         stop = gtfs.get_stop(device["stop_id"])
         routes = gtfs.routes_for_stop(device["stop_id"])
 
-    ads = await db.list_ads()
+    settings = get_settings()
+    from app.services.media import with_public_ad_urls
+
+    ads = with_public_ad_urls(await db.list_ads(), settings.root_path_normalized)
     settings_map = await db.get_settings_map()
     resp = templates.TemplateResponse(
         request,
@@ -299,7 +302,7 @@ async def paradero_page(
             "routes": routes,
             "ads": ads,
             "idle_seconds": settings_map["idle_seconds"],
-            "base_url": get_settings().base_url,
+            "base_url": settings.base_url,
         },
     )
     resp.headers["Cache-Control"] = "no-store, max-age=0"

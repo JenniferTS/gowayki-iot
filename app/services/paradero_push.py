@@ -5,8 +5,10 @@ from typing import Any
 
 from fastapi import Request
 
+from app.config import get_settings
 from app.db import AppDatabase
 from app.services.gtfs import GtfsService
+from app.services.media import with_public_ad_urls
 
 
 async def build_paradero_payload(
@@ -19,7 +21,8 @@ async def build_paradero_payload(
     if device.get("stop_id") and gtfs.available:
         stop = gtfs.get_stop(device["stop_id"])
         routes = gtfs.routes_for_stop(device["stop_id"])
-    ads = await db.list_ads()
+    root = get_settings().root_path_normalized
+    ads = with_public_ad_urls(await db.list_ads(), root)
     settings = await db.get_settings_map()
     return {
         "device": {

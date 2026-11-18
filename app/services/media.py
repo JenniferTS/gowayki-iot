@@ -23,6 +23,28 @@ def detect_media_type(url: str) -> str | None:
     return None
 
 
+def public_asset_url(url: str, root_path: str = "") -> str:
+    """Antepone ROOT_PATH a rutas absolutas locales (/static/...) detrás de nginx."""
+    raw = (url or "").strip()
+    if not raw:
+        return raw
+    if raw.startswith(("http://", "https://", "data:", "blob:")):
+        return raw
+    prefix = (root_path or "").rstrip("/")
+    if raw.startswith("/") and prefix:
+        return prefix + raw
+    return raw
+
+
+def with_public_ad_urls(ads: list[dict], root_path: str = "") -> list[dict]:
+    out: list[dict] = []
+    for ad in ads:
+        item = dict(ad)
+        item["url"] = public_asset_url(str(item.get("url") or ""), root_path)
+        out.append(item)
+    return out
+
+
 def validate_ad_url(url: str) -> tuple[str, str]:
     """Return (normalized_url, media_type) or raise ValueError."""
     raw = (url or "").strip()
