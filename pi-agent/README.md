@@ -14,9 +14,10 @@ El repo es privado: el instalador y los archivos del agente se sirven desde el p
 
 ```bash
 curl -fsSL https://paradero.172-214-154-175.sslip.io/pi/install.sh | sudo bash
+# equivalente: .../iot/pi/install.sh
 ```
 
-Vincular con el código de `/admin`:
+Vincular con el código de `/iot/admin`:
 
 ```bash
 echo CODIGO6 | sudo tee /etc/gowayki/pair.code
@@ -31,9 +32,10 @@ Archivos públicos del panel: `/pi/install.sh`, `/pi/main.py`, `/pi/requirements
 | Variable | Descripción |
 |----------|-------------|
 | `API_BASE_URL` | `https://paradero.172-214-154-175.sslip.io` |
-| `MQTT_HOST` | IP/host del Mosquitto de la VM |
-| `MQTT_PORT` | `1883` |
-| `MQTT_USER` / `MQTT_PASSWORD` | Opcional (broker MVP permite anónimo) |
+| `MQTT_HOST` | Host Mosquitto (`172-214-154-175.sslip.io`) |
+| `MQTT_PORT` | `8883` (MQTTS; el 1883 no entra desde fuera) |
+| `MQTT_TLS` | `1` |
+| `MQTT_USER` / `MQTT_PASSWORD` | Usuario broker (p. ej. `gowayki-pi`) |
 | `ENABLE_KIOSK_DISPLAY` | `1` abre Chromium en `display_url` |
 
 ## Comandos remotos (MQTT o HTTP heartbeat)

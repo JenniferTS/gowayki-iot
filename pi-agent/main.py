@@ -13,16 +13,19 @@ import paho.mqtt.client as mqtt
 
 API = os.environ.get("API_BASE_URL", "https://paradero.172-214-154-175.sslip.io").rstrip("/")
 MQTT_HOST = os.environ.get("MQTT_HOST", "172-214-154-175.sslip.io")
-MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
+# 1883 suele estar bloqueado hacia la VM; 8883 (MQTTS) es el puerto público.
+MQTT_PORT = int(os.environ.get("MQTT_PORT", "8883"))
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
+MQTT_TLS = os.environ.get("MQTT_TLS", "1" if MQTT_PORT == 8883 else "0") not in ("0", "false", "False")
+MQTT_TLS_INSECURE = os.environ.get("MQTT_TLS_INSECURE", "0") in ("1", "true", "True")
 TOPIC_PREFIX = os.environ.get("MQTT_TOPIC_PREFIX", "gowayki").strip("/")
 ENABLE_KIOSK = os.environ.get("ENABLE_KIOSK_DISPLAY", "1") not in ("0", "false", "False")
 
 STATE_DIR = Path(os.environ.get("GOWAYKI_STATE_DIR", "/var/lib/gowayki"))
 SESSION_PATH = STATE_DIR / "session.json"
 PAIR_CODE_PATH = Path(os.environ.get("GOWAYKI_PAIR_CODE_FILE", "/etc/gowayki/pair.code"))
-APP_VERSION = "pi-agent/0.3.1"
+APP_VERSION = "pi-agent/0.3.2"
 GPIO_MONITOR_URL = os.environ.get("GPIO_MONITOR_URL", "http://127.0.0.1:8080").rstrip("/")
 
 
@@ -241,6 +244,7 @@ class Agent:
     def __init__(self, session: dict) -> None:
         self.session = session
         self.device_id = session["kiosk_id"]
+        self.mqtt_ok = False
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION2,
             client_id=f"{self.device_id}_pi",
@@ -248,6 +252,10 @@ class Agent:
         )
         if MQTT_USER:
             self.client.username_pw_set(MQTT_USER, MQTT_PASSWORD)
+        if MQTT_TLS:
+            self.client.tls_set()
+            if MQTT_TLS_INSECURE:
+                self.client.tls_insecure_set(True)
         offline = json.dumps({"online": False, "ts": time.time(), "app": APP_VERSION})
         self.client.will_set(
             topic(self.device_id, "estado"),
@@ -261,11 +269,21 @@ class Agent:
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         rc = reason_code if isinstance(reason_code, int) else getattr(reason_code, "value", reason_code)
         print(f"mqtt connected rc={rc}")
+        self.mqtt_ok = rc == 0
         if rc != 0:
             return
         client.subscribe(topic(self.device_id, "comandos"), qos=1)
         online = json.dumps({"online": True, "ts": time.time(), "app": APP_VERSION})
         client.publish(topic(self.device_id, "estado"), online, qos=1, retain=True)
+
+    def _mqtt_publish(self, name: str, payload: str, *, qos: int = 0, retain: bool = False) -> None:
+        if not self.mqtt_ok:
+            return
+        try:
+            self.client.publish(topic(self.device_id, name), payload, qos=qos, retain=retain)
+        except Exception as exc:  # noqa: BLE001
+            print(f"mqtt publish error: {exc}")
+            self.mqtt_ok = False
 
     def _on_message(self, client, userdata, msg):
         raw = msg.payload.decode("utf-8", errors="replace")
@@ -287,9 +305,7 @@ class Agent:
         elif accion == "unpair":
             clear_session()
             offline = json.dumps({"online": False, "ts": time.time(), "reason": "unpair"})
-            self.client.publish(
-                topic(self.device_id, "estado"), offline, qos=1, retain=True
-            )
+            self._mqtt_publish("estado", offline, qos=1, retain=True)
             raise SystemExit("unpair")
         else:
             print(f"unknown command: {accion}")
@@ -332,11 +348,17 @@ class Agent:
 
     def run(self) -> None:
         open_kiosk(self.session.get("display_url") or "")
-        self.client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
-        self.client.loop_start()
+        # MQTT es opcional: si 1883/credenciales fallan, el agente sigue por HTTP (pair/heartbeat/jobs).
+        try:
+            print(f"mqtt connecting {MQTT_HOST}:{MQTT_PORT} tls={MQTT_TLS} user={MQTT_USER or '-'}")
+            self.client.connect(MQTT_HOST, MQTT_PORT, keepalive=60)
+            self.client.loop_start()
+        except Exception as exc:  # noqa: BLE001
+            print(f"mqtt unavailable ({exc}); continuing with HTTP only")
+            self.mqtt_ok = False
         last_http = 0.0
         last_gpio = 0.0
-        print(f"agent {APP_VERSION} running device={self.device_id}")
+        print(f"agent {APP_VERSION} running device={self.device_id} api={API}")
         try:
             while True:
                 now = time.time()
@@ -357,11 +379,7 @@ class Agent:
                             "gpio_available": snap.get("available"),
                             "gpio_count": len(snap.get("devices") or []),
                         }
-                        self.client.publish(
-                            topic(self.device_id, "telemetria"),
-                            json.dumps(tele_gpio),
-                            qos=0,
-                        )
+                        self._mqtt_publish("telemetria", json.dumps(tele_gpio))
                     except SystemExit:
                         raise
                     except Exception as exc:  # noqa: BLE001
@@ -373,11 +391,7 @@ class Agent:
                     "app": APP_VERSION,
                     "display_url": self.session.get("display_url"),
                 }
-                self.client.publish(
-                    topic(self.device_id, "telemetria"),
-                    json.dumps(tele),
-                    qos=0,
-                )
+                self._mqtt_publish("telemetria", json.dumps(tele))
                 if now - last_http >= 60:
                     try:
                         result = http_heartbeat(self.session)
@@ -396,8 +410,11 @@ class Agent:
                     last_http = now
                 time.sleep(3)
         finally:
-            self.client.loop_stop()
-            self.client.disconnect()
+            try:
+                self.client.loop_stop()
+                self.client.disconnect()
+            except Exception:
+                pass
 
 
 def main() -> None:
